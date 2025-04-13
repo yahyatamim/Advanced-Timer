@@ -100,32 +100,66 @@ graph LR
 - **Responsive Design**: Columns stack vertically on small screens, with cards as collapsible sections.
 
 
+## Technologies and Libraries Used
+
+This project leverages several libraries and technologies to provide its functionality:
+
+### Backend (ESP32 Firmware)
+
+The firmware running on the ESP32 relies on the following Arduino libraries, managed via PlatformIO:
+
+* **`bblanchon/ArduinoJson` (`v7.3.1` or compatible)**: Essential for parsing and serializing the JSON data used for configuration management between the ESP32 and the web portal.
+* **`adafruit/RTClib` (`v2.1.4` or compatible)**: Used for maintaining accurate timekeeping, which can be crucial for scheduled events or future time-based logic, potentially synchronizing with an external Real-Time Clock module or using the ESP32's internal RTC.
+* **`arduino-libraries/NTPClient` (`v3.2.1` or compatible)**: Enables fetching the current time from Network Time Protocol (NTP) servers over the internet, ensuring the device's clock is accurate.
+* **`khoih-prog/ESP32TimerInterrupt` (`v2.3.0` or compatible)**: Provides precise hardware timer interrupts on the ESP32, likely used as the core timing mechanism for the user-configurable "Timer" `IOVariable` functionality.
+* **`sstaub/TickTwo` (`v4.4.0` or compatible)**: A software-based timer library, suitable for scheduling non-critical internal tasks and functions within the main loop or background tasks without blocking execution.
+* **`me-no-dev/AsyncTCP` (`v3.3.2` or compatible)**: Provides the underlying asynchronous TCP networking capabilities required by the web server.
+* **`me-no-dev/ESPAsyncWebServer` (`v3.6.0` or compatible)**: Used to create the asynchronous web server that hosts the configuration portal, handling HTTP requests efficiently without blocking other operations.
+* **`LittleFS`**: The chosen filesystem for storing web assets and configuration files on the ESP32's flash memory. It's integrated via the PlatformIO framework configuration (`board_build.filesystem = littlefs`).
+
+### Frontend (Configuration Portal)
+
+The web-based user interface served by the ESP32 utilizes standard web technologies:
+
+* **HTML (`index.html`)**: Structures the content of the configuration portal.
+* **CSS (`style.css`, `bootstrap.min.css`)**: Styles the visual presentation of the portal. `bootstrap.min.css` (the minified version of Bootstrap) is used for its pre-built components and responsive layout capabilities, chosen for its smaller size and simplicity.
+* **JavaScript (`script.js`, `Sortable.min.js`)**: Handles user interactions, communication with the ESP32 backend (fetching/sending configuration), and dynamic updates to the interface. `Sortable.min.js` is specifically included to enable the drag-and-drop functionality for organizing conditions, actions, and rules.
+
+All frontend assets (`index.html`, `style.css`, `bootstrap.min.css`, `script.js`, `Sortable.min.js`, `favicon.ico`) reside within the `data` directory and are uploaded to the ESP32's LittleFS filesystem to be served directly by the ESPAsyncWebServer.
+
 ## Configuration Management: Unified JSON Approach
 
-This project utilizes a **Unified JSON Approach** for managing configuration data transfer between the web-based configuration portal (front-end) and the ESP32 microcontroller (backend).
+This project utilizes a **Unified JSON Approach** for managing *all* configuration data transfer between the web-based configuration portal (front-end) and the ESP32 microcontroller (backend). This single JSON file serves as the central repository for both the core automation logic structures and device-level settings, all residing at the top level of the JSON structure.
 
 ### Rationale
 
-While a RESTful approach with multiple endpoints for each data type (`IOVariable`, `condition`, `rule`, etc.) is possible, the Unified JSON approach was chosen for several key advantages in this embedded context:
+While a RESTful approach with multiple endpoints could be used, the Unified JSON approach was chosen for several key advantages in this embedded context:
 
-1.  **Atomic Updates & Consistency:** Configuration items often have interdependencies (rules rely on groups, which rely on conditions/actions). Sending the *entire* configuration in one transaction ensures that the device state remains consistent and avoids partial updates that could lead to undefined behavior.
+1.  **Atomic Updates & Consistency:** Configuration items, including both logic elements (rules, IOs) and device settings (WiFi), often have interdependencies or are best managed as a single unit. Sending the *entire* configuration in one transaction ensures that the device state remains consistent and avoids partial updates that could lead to undefined behavior.
 2.  **Simplified Development:**
-    *   **Front-end:** Requires only one API call to fetch the complete configuration and one call to save all changes. State management becomes simpler.
-    *   **Backend:** Requires only one primary API endpoint (e.g., `/api/config`) to handle both sending and receiving the configuration, reducing code complexity and request handling overhead on the ESP32.
-3.  **User Workflow Alignment:** Users typically load the configuration page, make multiple modifications across different sections (IOs, rules, etc.), and then save everything at once. This approach mirrors that workflow directly.
+    * **Front-end:** Requires only one API call to fetch the complete configuration and one call to save all changes. State management becomes simpler.
+    * **Backend:** Requires only one primary API endpoint (e.g., `/config`) to handle both sending and receiving the configuration, reducing code complexity and request handling overhead on the ESP32.
+3.  **User Workflow Alignment:** Users typically load the configuration page, make multiple modifications across different sections (IOs, rules, WiFi settings, etc.), and then save everything at once. This approach mirrors that workflow directly.
 4.  **Reduced Request Overhead:** Minimizes the number of simultaneous HTTP requests the ESP32 needs to handle, which is beneficial for resource-constrained devices.
 
 ### Mechanism
 
-*   **Endpoint:** A single primary endpoint, typically `/api/config`, is used.
-*   **`GET /api/config`:**
-    *   The front-end sends a GET request to this endpoint upon loading the configuration page.
-    *   The ESP32 backend gathers all *active* configuration data (items where `status == true` from `IOVariable`, `condition`, `action`, `conditionGroup`, `actionGroup`, `rule` arrays) and the `ruleSequence`.
-    *   It serializes this data into a single, structured JSON object.
-    *   This JSON object is sent back to the front-end.
-    *   *Conceptual JSON Structure:*
+* **Endpoint:** A single primary endpoint, `/config`, is used.
+* **`GET /config`:**
+    * The front-end sends a GET request to this endpoint upon loading the configuration page.
+    * The ESP32 backend gathers all *active* configuration data. This includes device settings (like WiFi credentials) and the logic structures (items where `status == true` from `IOVariable`, `condition`, `action`, `conditionGroup`, `actionGroup`, `rule` arrays), and the `ruleSequence`.
+    * It serializes this data into a single, structured JSON object with all items at the top level.
+    * This JSON object is sent back to the front-end.
+    * *Conceptual JSON Structure:*
         ```json
         {
+          "deviceSettings": {
+            "wifiSSID": "your_network_name",
+            "wifiPassword": "your_password",
+            "deviceName": "AdvancedTimer1",
+            "ntpServer": "pool.ntp.org"
+             // ... other non-data-structure related settings
+          },
           "ioVariables": [ /* Array of active IOVariable objects */ ],
           "conditions": [ /* Array of active condition objects */ ],
           "actions": [ /* Array of active action objects */ ],
@@ -135,25 +169,26 @@ While a RESTful approach with multiple endpoints for each data type (`IOVariable
           "ruleSequence": [ /* Array of rule 'num's in execution order */ ]
         }
         ```
-*   **`POST /api/config` (or `PUT`)**
-    *   When the user saves changes, the front-end constructs a JSON object representing the *complete desired configuration* based on its current state.
-    *   This single JSON object is sent via a POST (or PUT) request to the `/api/config` endpoint.
-    *   The ESP32 backend receives the JSON, parses it, and performs validation.
-    *   If valid, the backend **replaces** its entire current configuration in RAM with the data received from the JSON.
-    *   The updated configuration is then saved atomically to persistent storage (e.g., SPIFFS, LittleFS).
+* **`POST /config` (or `PUT`)**
+    * When the user saves changes, the front-end constructs a JSON object representing the *complete desired configuration* (including all top-level settings and automation logic) based on its current state.
+    * This single JSON object is sent via a POST (or PUT) request to the `/config` endpoint.
+    * The ESP32 backend receives the JSON, parses it, and performs validation.
+    * If valid, the backend **replaces** its entire current configuration in RAM with the data received from the JSON.
+    * The updated configuration is then saved atomically to persistent storage (e.g., LittleFS).
 
 ### Advanced Capabilities Enabled by this Approach
 
-*   **Configuration Import/Export:** The unified JSON object naturally represents the entire device logic state. This makes it straightforward to implement features allowing users to:
-    *   **Export:** Download the current configuration JSON as a backup file.
-    *   **Import:** Upload a previously exported JSON file to restore or apply a configuration.
-*   **Multiple Configuration Profiles:** The device could potentially store multiple configuration JSON files (e.g., `config_day.json`, `config_night.json`) in its filesystem. The backend could then provide an interface to load and activate a specific configuration profile based on user selection or other triggers.
+* **Configuration Import/Export:** The unified JSON object naturally represents the entire device state. This makes it straightforward to implement features allowing users to:
+    * **Export:** Download the current configuration JSON as a backup file.
+    * **Import:** Upload a previously exported JSON file to restore or apply a configuration.
+* **Multiple Configuration Profiles:** The device could potentially store multiple configuration JSON files (e.g., `config_projectA.json`, `config_projectB.json`) in its filesystem. The backend could then provide an interface (perhaps via a different endpoint or a parameter in the `/config` request) to load and activate a specific configuration profile.
 
 ### Considerations
 
-*   **Payload Size:** For very complex configurations with many active items, the JSON payload size can become significant.
-*   **Memory Usage:** Parsing and serializing large JSON objects requires sufficient RAM on the ESP32. Efficient libraries (like ArduinoJson) and careful memory allocation (e.g., using a pre-sized `StaticJsonDocument`) are essential.
-
+* **Payload Size:** For very complex configurations, the JSON payload size can become significant.
+* **Memory Usage:** Parsing and serializing large JSON objects requires sufficient RAM on the ESP32. Efficient libraries (like ArduinoJson) and careful memory allocation are essential.
+* **Clarity:** Having many top-level keys might slightly reduce the immediate clarity compared to grouping settings, but it simplifies the access path (e.g., `jsonData['wifiSSID']` vs `jsonData['deviceSettings']['wifiSSID']`). This is often a matter of preference.
+* **Security:** Storing sensitive data like WiFi passwords requires careful consideration regarding filesystem security and potential exposure via the API endpoint. Ensure appropriate security measures are in place if the device is accessible on untrusted networks.
 
 ## Putting It All Together
 
