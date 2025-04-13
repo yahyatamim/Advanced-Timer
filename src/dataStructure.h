@@ -15,6 +15,8 @@
 #define MAX_ACTIONS 50
 #define MAX_ACTION_GROUPS 20
 #define MAX_RULES 20
+#define MAX_CONDITIONS_PER_GROUP 10
+#define MAX_ACTIONS_PER_GROUP 10
 
 // --- Enums ---
 // Defines the different types of I/O or internal variables
@@ -104,12 +106,12 @@ struct action {
 
 // Groups multiple conditions together with a combining logic
 struct conditionGroup {
-  uint8_t num;                 // Unique ID for this group
-  char name[20];               // User-defined name
-  uint8_t conditionArray[10];  // Array of 'conNum's included in this group
+  uint8_t num;                                       // Unique ID for this group
+  char name[20];                                     // User-defined name
+  uint8_t conditionArray[MAX_CONDITIONS_PER_GROUP];  // Array of 'conNum's
+
   // Runtime state:
-  bool resultArray[10];  // Stores the result of each condition in the array
-                         // (runtime)
+  bool resultArray[MAX_CONDITIONS_PER_GROUP];
   // Configuration:
   combineLogic Logic;  // Logic used to combine results (AND/OR)
   bool status;         // Is this group definition active/enabled?
@@ -117,10 +119,10 @@ struct conditionGroup {
 
 // Groups multiple actions together to be executed sequentially
 struct actionGroup {
-  uint8_t num;              // Unique ID for this group
-  char name[20];            // User-defined name
-  uint8_t actionArray[10];  // Array of 'actNum's included in this group
-  bool status;              // Is this group definition active/enabled?
+  uint8_t num;                                 // Unique ID for this group
+  char name[20];                               // User-defined name
+  uint8_t actionArray[MAX_ACTIONS_PER_GROUP];  // Array of 'actNum's
+  bool status;  // Is this group definition active/enabled?
 };
 
 // Represents a rule linking a Condition Group to an Action Group
@@ -137,9 +139,9 @@ struct rule {
 // --- Extern Declarations for Global Data Arrays ---
 // These arrays hold the actual configuration and runtime state data.
 // They are defined in dataStructure.cpp.
-extern IOVariable ioVariables[MAX_DIGITAL_IN + MAX_DIGITAL_OUT + MAX_ANALOG_IN +
+
+extern IOVariable IOVariables[MAX_DIGITAL_IN + MAX_DIGITAL_OUT + MAX_ANALOG_IN +
                               MAX_SOFTIO + MAX_TIMERS];
-extern IOVariable defaultIOVariables[];  // Definition of defaults (in .cpp)
 extern condition conditions[MAX_CONDITIONS];
 extern conditionGroup conditionGroups[MAX_CONDITION_GROUPS];
 extern action actions[MAX_ACTIONS];
@@ -148,5 +150,8 @@ extern rule rules[MAX_RULES];
 extern uint8_t ruleSequence[MAX_RULES];  // Defines the order in which active
                                          // rules are evaluated
 // --- End Extern Declarations ---
+
+void CreateDefaultIOVariables();
+void InitializeDefaultLogicComponents();
 
 #endif  // DATA_STRUCTURE_H

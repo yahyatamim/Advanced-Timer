@@ -25,15 +25,18 @@ void setup() {
 }
 
 void loop() {
-  delay(100);
+  delay(1000);
   esp_task_wdt_reset();
 }
 
 void networkTaskFunction(void *pvParameters) {
+  initiateConfig();
+  Serial.println(generateJsonConfigString());
+
   esp_task_wdt_init(wdtTimeout, true);
   esp_task_wdt_add(NULL);
   for (;;) {
-    delay(100);
+    delay(1000);
     esp_task_wdt_reset();
   }
 }
