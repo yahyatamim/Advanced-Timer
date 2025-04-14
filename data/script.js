@@ -240,44 +240,92 @@ function saveIoVariableChanges() {
 
 // Function to save configuration to ESP32
 async function saveConfig() {
-    // Update the deviceSettings part of the global config object
+    // --- Get button reference ---
+    const saveButton = document.getElementById('saveConfigBtn');
+    if (!saveButton) {
+        console.error("Save button not found!");
+        return; // Exit if button doesn't exist
+    }
+
+    // --- Disable button and change appearance immediately ---
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...'; // Initial feedback
+    saveButton.classList.remove('btn-success', 'btn-danger', 'btn-info'); // Clear previous states
+    saveButton.classList.add('btn-warning');    // Add "in progress" color
+
+    // --- Update the deviceSettings part of the global config object ---
     if (!currentConfig.deviceSettings) {
-        currentConfig.deviceSettings = {}; // Initialize if it doesn't exist
+        currentConfig.deviceSettings = {};
     }
     currentConfig.deviceSettings.DeviceName = document.getElementById('deviceName').value;
     currentConfig.deviceSettings.SSID = document.getElementById('wifiSSID').value;
     currentConfig.deviceSettings.PASS = document.getElementById('wifiPassword').value;
     currentConfig.deviceSettings.run = document.getElementById('runProgram').checked;
 
-    // Add logic here later to update other parts of currentConfig (IOs, Rules, etc.)
-    // For now, we just send back the fetched config with updated deviceSettings
+    // --- Add logic here later to update other parts of currentConfig ---
 
-    console.log("Sending configuration:", JSON.stringify(currentConfig, null, 2)); // Log the JSON being sent
+    console.log("Sending configuration:", JSON.stringify(currentConfig, null, 2));
 
+    // --- Timeout to infer success if no error received ---
+    let successTimer = setTimeout(() => {
+        // If this timer runs, assume save was successful and ESP is rebooting
+        console.log("No error received within timeout, assuming success.");
+        saveButton.textContent = 'Config Saved, Rebooting...';
+        saveButton.classList.remove('btn-warning');
+        saveButton.classList.add('btn-info'); // Use blue/info for success/rebooting state
+
+        // Schedule page refresh after a delay (e.g., 9 seconds)
+        setTimeout(() => {
+            location.reload(); // Reload the page
+        }, 9000); // 9000 milliseconds = 9 seconds
+
+    }, 3000); // 3000 milliseconds = 3 second timeout
+
+    // --- Try sending the configuration ---
     try {
         const response = await fetch('/config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(currentConfig), // Send the entire config object
+            body: JSON.stringify(currentConfig),
         });
 
+        // If fetch completes, clear the success inference timer
+        clearTimeout(successTimer);
+
         if (response.ok) {
-            alert("Configuration saved successfully! The device will now restart.");
-            // Optionally disable the button or show a loading indicator
-            document.getElementById('saveConfigBtn').disabled = true;
-            // The ESP32 will handle the restart after sending the OK response.
+            // SUCCESS: We actually got a 200 OK (less likely, but handle it)
+            console.log("Received explicit OK response.");
+            saveButton.textContent = 'Config Saved, Rebooting...';
+            saveButton.classList.remove('btn-warning');
+            saveButton.classList.add('btn-info'); // Blue/info color
+
+            // Schedule page refresh
+            setTimeout(() => {
+                location.reload();
+            }, 9000);
+
         } else {
+            // ERROR: Server responded with an error status (4xx, 5xx)
             const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+            console.error(`Server error: ${response.status} - ${errorText}`);
+            saveButton.textContent = `Error: ${errorText.substring(0, 50)}${errorText.length > 50 ? '...' : ''}`; // Show error in button
+            saveButton.classList.remove('btn-warning');
+            saveButton.classList.add('btn-danger'); // Red/danger color
+            saveButton.disabled = false; // Re-enable button on server error
         }
     } catch (error) {
-        console.error("Error saving configuration:", error);
-        alert(`Error saving configuration: ${error.message}`);
-        document.getElementById('saveConfigBtn').disabled = false; // Re-enable button on error
+        // NETWORK ERROR: Fetch failed (network down, ESP unreachable, CORS etc.)
+        clearTimeout(successTimer); // Clear timer on network error too
+        console.error("Network error saving configuration:", error);
+        saveButton.textContent = `Network Error: ${error.message.substring(0, 40)}${error.message.length > 40 ? '...' : ''}`;
+        saveButton.classList.remove('btn-warning');
+        saveButton.classList.add('btn-danger'); // Red/danger color
+        saveButton.disabled = false; // Re-enable button on network error
     }
 }
+
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
