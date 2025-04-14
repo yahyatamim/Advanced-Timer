@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <ESP32TimerInterrupt.h>  // Hardware Timer
+// #include <ESP32TimerInterrupt.h>  // Hardware Timer
 #include <Preferences.h>          // NVS for WiFi credentials (can be shared)
 #include <RTClib.h>               // timekeeping for scheduling
 #include <TickTwo.h>              // Software Timer

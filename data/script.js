@@ -8,12 +8,30 @@ let ioVariableSortable = null; // To hold the Sortable instance
 const dataTypesMap = {
     0: 'DigitalInput', 1: 'DigitalOutput', 2: 'AnalogInput', 3: 'SoftIO', 4: 'Timer'
 };
+// --- UPDATED operationMode Maps ---
 const operationModeMap = {
-    0: 'None', 1: 'Rising', 2: 'Falling', 3: 'StateChange', 4: 'Pulse', 5: 'OneShot', 6: 'Repeating', 7: 'Countdown'
+    0: 'None',          // Default/Raw/Volatile
+    1: 'Rising Edge',   // DI
+    2: 'Falling Edge',  // DI
+    3: 'State Change',  // DI
+    4: 'Pulse',         // DO
+    5: 'One Shot',      // Timer
+    6: 'Repeating',     // Timer
+    8: 'Scaled (0-100%)', // AI
+    9: 'Persistent'     // SoftIO
 };
 const operationModeShortMap = {
-    0: 'None', 1: 'Rise', 2: 'Fall', 3: 'StCn', 4: 'Puls', 5: 'Once', 6: 'Rept', 7: 'Cntd'
+    0: 'None', // Default/Raw/Volatile
+    1: 'Rise', // DI
+    2: 'Fall', // DI
+    3: 'StCh', // DI (Changed from StCn for clarity)
+    4: 'Puls', // DO
+    5: 'Once', // Timer
+    6: 'Rept', // Timer
+    8: 'Scle', // AI
+    9: 'Pers'  // SoftIO
 };
+// --- END UPDATED Maps ---
 
 
 // --- NEW: Helper functions for Condition Badges ---

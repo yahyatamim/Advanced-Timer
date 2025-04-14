@@ -9,7 +9,7 @@
 #define MAX_DIGITAL_OUT 4
 #define MAX_ANALOG_IN 4
 #define MAX_SOFTIO 20
-#define MAX_TIMERS 16
+#define MAX_TIMERS 10
 #define MAX_CONDITIONS 50
 #define MAX_CONDITION_GROUPS 20
 #define MAX_ACTIONS 50
@@ -31,7 +31,8 @@ enum operationMode {
   pulse,        // Generate a pulse (DigitalOutput - potentially future use)
   oneShot,      // Timer runs once (Timer)
   repeating,    // Timer restarts automatically (Timer)
-  countdown     // Timer counts down (Timer - potentially future use)
+  scaled,       // Analog Input will be scaled to 0-100 range
+  persistent,   // SoftIO's value will be persistent accross reboot
 };
 
 // Defines comparison types used in Conditions
