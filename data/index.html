@@ -159,10 +159,21 @@
                         <input type="hidden" id="editIoType">
                         <input type="hidden" id="editIoNum">
 
-                        <div class="mb-3">
-                            <label for="editIoDiNum" class="form-label">Input Number:</label>
-                            <input type="text" class="form-control" id="editIoDiNum" disabled readonly>
+                        <!-- New row for Input Number and Switch -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div> <!-- Left side: Label and Number -->
+                                <label class=" mb-0 me-2">Input Number:</label>
+                                <span id="displayIoDiNum" class="fw-bold"></span> <!-- JS will populate this -->
+                            </div>
+                            <div> <!-- Right side: Switch -->
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="editIoStatus">
+                                    <label class="form-check-label" for="editIoStatus">Enable</label>
+                                    <!-- Shortened label -->
+                                </div>
+                            </div>
                         </div>
+
                         <div class="mb-3">
                             <label for="editIoName" class="form-label">Name:</label>
                             <input type="text" class="form-control" id="editIoName" required maxlength="29">
@@ -175,10 +186,6 @@
                                 <option value="2">Falling Edge</option> <!-- Corresponds to 'falling' enum -->
                                 <option value="3">State Change</option> <!-- Corresponds to 'stateChange' enum -->
                             </select>
-                        </div>
-                        <div class="mb-3 form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="editIoStatus">
-                            <label class="form-check-label" for="editIoStatus">Enable this Input</label>
                         </div>
                     </form>
                 </div>

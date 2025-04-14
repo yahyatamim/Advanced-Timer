@@ -231,8 +231,8 @@ function handleEditButtonClick(event) {
         modal.querySelector('#editIoType').value = typeStr;
         modal.querySelector('#editIoNum').value = num;
 
-        // Display the (disabled) Input Number
-        modal.querySelector('#editIoDiNum').value = num;
+        // Display the Input Number in the span
+        modal.querySelector('#displayIoDiNum').textContent = num; // Use textContent for a span
 
         // Populate the editable fields
         modal.querySelector('#editIoName').value = ioVariable.nm; // Set the name input
