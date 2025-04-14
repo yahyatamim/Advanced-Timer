@@ -64,3 +64,65 @@ footer {
     background-color: #495057;
     color: #f8f9fa;
 }
+
+.io-variable-item {
+    cursor: grab;
+    /* Indicate draggable */
+    margin-bottom: 5px;
+    /* Spacing between items */
+    padding: 0.5rem 0.75rem;
+    /* Adjust padding */
+}
+
+.io-variable-item.inactive {
+    opacity: 0.6;
+    background-color: #e9ecef;
+    /* Light grey background for inactive */
+    filter: grayscale(50%);
+}
+
+.io-name {
+    font-weight: 500;
+    margin-right: 10px;
+}
+
+.io-indicators .badge {
+    margin-left: 3px;
+    font-size: 0.7em;
+    /* Smaller badges */
+    padding: 0.2em 0.4em;
+}
+
+.edit-io-btn {
+    padding: 0.1rem 0.4rem;
+    /* Smaller button */
+    line-height: 1;
+    font-size: 1rem;
+    /* Adjust icon size */
+    border: none;
+}
+
+.edit-io-btn:hover {
+    background-color: #d0d0d0;
+}
+
+/* Style for SortableJS dragging */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #c8ebfb;
+}
+
+.sortable-drag {
+    cursor: grabbing;
+}
+
+/* Ensure modal backdrop is styled if needed */
+.modal-backdrop {
+    z-index: 1040 !important;
+    /* Default is 1040 */
+}
+
+.modal {
+    z-index: 1050 !important;
+    /* Default is 1050 */
+}

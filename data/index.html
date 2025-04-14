@@ -12,9 +12,9 @@
 
 <body>
     <!-- Header Card -->
-    <header class="mb-4 p-3">
+    <header class="container mb-3 mt-3">
         <div class="card text-white text-center"
-            style="background: linear-gradient(90deg, #8E24AA, #6A1B9A, #4A148C); text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
+            style="background: linear-gradient(90deg, #8e24aa, #6A1B9A, #4A148C); text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
             <div class="card-body py-3">
                 <h1 class="mb-0">Advanced Timer</h1>
             </div>
@@ -22,14 +22,58 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="container mt-4">
-        <!-- Placeholder for future columns/cards -->
-        <!-- <div class="row"> -->
-        <!-- IOVariables Column -->
-        <!-- Condition/Action Column -->
-        <!-- Group Column -->
-        <!-- Rules Column -->
-        <!-- </div> -->
+    <main class="container mt-2">
+        <div class="row mb-4">
+            <!-- IOVariables Column -->
+            <div class="col-md-3"> <!-- Adjust column size as needed -->
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">IO Variables</h5>
+                    </div>
+                    <div class="card-body py-2 px-3">
+                        <h6 class="mb-2 small">Digital Inputs</h6>
+                        <ul class="list-group list-group-flush small" id="digital-inputs-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder for Condition/Action Column -->
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Condition/Action</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Drag IO Variables here...</p>
+                        <!-- Add drop zones later -->
+                    </div>
+                </div>
+            </div>
+            <!-- Placeholder for Group Column -->
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Group</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Drag Conditions/Actions here...</p>
+                        <!-- Add drop zones later -->
+                    </div>
+                </div>
+            </div>
+            <!-- Placeholder for Rules Column -->
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Rules</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Drag Groups here...</p>
+                        <!-- Add drop zones later -->
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End of row -->
 
         <!-- Device Settings Card -->
         <div class="card mb-4 shadow-sm">
@@ -80,6 +124,52 @@
     <footer class="text-center py-3 mt-4">
         <p>&copy; 2025 Advanced Timer</p>
     </footer>
+
+    <!-- Add this Modal structure somewhere at the end of the <body> -->
+    <div class="modal fade" id="editIoVariableModal" tabindex="-1" aria-labelledby="editIoVariableModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editIoVariableModalLabel">Edit Digital Input</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-io-form">
+                        <!-- Hidden fields to store identifier -->
+                        <input type="hidden" id="editIoType">
+                        <input type="hidden" id="editIoNum">
+
+                        <div class="mb-3">
+                            <label for="editIoDiNum" class="form-label">Input Number:</label>
+                            <input type="text" class="form-control" id="editIoDiNum" disabled readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editIoName" class="form-label">Name:</label>
+                            <input type="text" class="form-control" id="editIoName" required maxlength="29">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editIoMode" class="form-label">Operation Mode:</label>
+                            <select class="form-select" id="editIoMode">
+                                <option value="0">None</option> <!-- Corresponds to 'none' enum -->
+                                <option value="1">Rising Edge</option> <!-- Corresponds to 'rising' enum -->
+                                <option value="2">Falling Edge</option> <!-- Corresponds to 'falling' enum -->
+                                <option value="3">State Change</option> <!-- Corresponds to 'stateChange' enum -->
+                            </select>
+                        </div>
+                        <div class="mb-3 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="editIoStatus">
+                            <label class="form-check-label" for="editIoStatus">Enable this Input</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveIoChangesBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="/bootstrap.min.js"></script>
     <script src="/Sortable.min.js"></script>
