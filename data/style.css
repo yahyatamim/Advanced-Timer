@@ -126,3 +126,78 @@ footer {
     z-index: 1050 !important;
     /* Default is 1050 */
 }
+
+
+/* --- Condition Item Styling (Similar to IO Variable Item) --- */
+.condition-item {
+    margin-bottom: 5px;
+}
+
+.condition-item.inactive {
+    /* Style if we add inactive state later */
+    opacity: 0.6;
+    background-color: #e9ecef;
+    filter: grayscale(50%);
+}
+
+.condition-number {
+    color: #6c757d;
+    /* Grey color for the number */
+    flex-shrink: 0;
+    /* Prevent number from shrinking */
+}
+
+.condition-target-name {
+    font-weight: 500;
+    /* Allow truncation */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    /* Adjust max-width as needed */
+    display: inline-block;
+    /* Needed for text-overflow */
+}
+
+.condition-badges .badge {
+    margin-right: 3px;
+    /* Spacing between badges */
+    font-size: 0.7em;
+    /* Smaller badges */
+    /* padding: 0.1em 0.4em; */
+    flex-shrink: 0;
+    /* Prevent badges shrinking too much */
+}
+
+/* Ensure delete button is styled (might already be covered) */
+.delete-condition-btn {
+    padding: 0.1rem 0.4rem;
+    /* Smaller button */
+    line-height: 1;
+    font-size: 1rem;
+    /* Adjust icon size */
+    border: none;
+    flex-shrink: 0;
+    /* Prevent button from shrinking */
+}
+
+.delete-condition-btn:hover {
+    background-color: #f8d7da;
+    /* Light red background on hover */
+    color: #842029;
+    /* Darker red text on hover */
+}
+
+/* --- Badge Styling (General - Adjust if needed) --- */
+
+.badge.text-truncate {
+    /* Ensure this exists if target name needs it */
+    max-width: 100px;
+    display: inline-block;
+}
+
+.bg-purple {
+    /* Ensure this exists */
+    background-color: #6f42c1;
+    color: #fff;
+}

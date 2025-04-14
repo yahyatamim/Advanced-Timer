@@ -83,7 +83,6 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numConditions; i++) {
     JsonObject condition = conditionsArray.add<JsonObject>();
     condition["cn"] = conditions[i].conNum;
-    condition["nm"] = conditions[i].name;
     condition["t"] = conditions[i].Type;
     condition["tn"] = conditions[i].targetNum;
     condition["cp"] = conditions[i].comp;
@@ -96,12 +95,10 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numConditionGroups; i++) {
     JsonObject conditionGroup = conditionGroupsArray.add<JsonObject>();
     conditionGroup["n"] = conditionGroups[i].num;
-    conditionGroup["nm"] = conditionGroups[i].name;
     JsonArray conditionArray = conditionGroup["ca"].to<JsonArray>();
     JsonArray resultArray = conditionGroup["ra"].to<JsonArray>();
     for (uint8_t j = 0; j < MAX_CONDITIONS_PER_GROUP; j++) {
       conditionArray.add(conditionGroups[i].conditionArray[j]);
-      resultArray.add(conditionGroups[i].resultArray[j]);
     }
     conditionGroup["l"] = conditionGroups[i].Logic;
     conditionGroup["s"] = conditionGroups[i].status;
@@ -111,7 +108,6 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numActions; i++) {
     JsonObject action = actionsArray.add<JsonObject>();
     action["an"] = actions[i].actNum;
-    action["nm"] = actions[i].name;
     action["t"] = actions[i].Type;
     action["tn"] = actions[i].targetNum;
     action["a"] = actions[i].action;
@@ -123,7 +119,6 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numActionGroups; i++) {
     JsonObject actionGroup = actionGroupsArray.add<JsonObject>();
     actionGroup["n"] = actionGroups[i].num;
-    actionGroup["nm"] = actionGroups[i].name;
     JsonArray actionArray = actionGroup["ar"].to<JsonArray>();
     for (uint8_t j = 0; j < MAX_ACTIONS_PER_GROUP; j++) {
       actionArray.add(actionGroups[i].actionArray[j]);
@@ -135,7 +130,6 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numRules; i++) {
     JsonObject rule = rulesArray.add<JsonObject>();
     rule["n"] = rules[i].num;
-    rule["nm"] = rules[i].name;
     rule["cg"] = rules[i].conditionGroup;
     rule["ag"] = rules[i].actionGroup;
     rule["s"] = rules[i].status;
@@ -196,8 +190,6 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_co = 0;
   for (JsonObject condJson : coArray) {
     conditions[i_co].conNum = condJson["cn"] | conditions[i_co].conNum;
-    strlcpy(conditions[i_co].name, condJson["nm"] | conditions[i_co].name,
-            sizeof(conditions[i_co].name));
     conditions[i_co].Type = (dataTypes)(condJson["t"] | conditions[i_co].Type);
     conditions[i_co].targetNum = condJson["tn"] | conditions[i_co].targetNum;
     conditions[i_co].comp =
@@ -212,9 +204,6 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_cg = 0;
   for (JsonObject cgJson : cgArray) {
     conditionGroups[i_cg].num = cgJson["n"] | conditionGroups[i_cg].num;
-    strlcpy(conditionGroups[i_cg].name,
-            cgJson["nm"] | conditionGroups[i_cg].name,
-            sizeof(conditionGroups[i_cg].name));
     conditionGroups[i_cg].Logic =
         (combineLogic)(cgJson["l"] | conditionGroups[i_cg].Logic);
     conditionGroups[i_cg].status = cgJson["s"] | conditionGroups[i_cg].status;
@@ -237,8 +226,6 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_ac = 0;
   for (JsonObject actJson : acArray) {
     actions[i_ac].actNum = actJson["an"] | actions[i_ac].actNum;
-    strlcpy(actions[i_ac].name, actJson["nm"] | actions[i_ac].name,
-            sizeof(actions[i_ac].name));
     actions[i_ac].Type = (dataTypes)(actJson["t"] | actions[i_ac].Type);
     actions[i_ac].targetNum = actJson["tn"] | actions[i_ac].targetNum;
     actions[i_ac].action = (actionType)(actJson["a"] | actions[i_ac].action);
@@ -252,10 +239,7 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_ag = 0;
   for (JsonObject agJson : agArray) {
     actionGroups[i_ag].num = agJson["n"] | actionGroups[i_ag].num;
-    strlcpy(actionGroups[i_ag].name, agJson["nm"] | actionGroups[i_ag].name,
-            sizeof(actionGroups[i_ag].name));
     actionGroups[i_ag].status = agJson["s"] | actionGroups[i_ag].status;
-
     JsonArray arJson = agJson["ar"];  // Use 'ar' as generated
     int j_ar = 0;
     for (JsonVariant val : arJson) {
@@ -274,8 +258,6 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_ru = 0;
   for (JsonObject ruleJson : ruArray) {
     rules[i_ru].num = ruleJson["n"] | rules[i_ru].num;
-    strlcpy(rules[i_ru].name, ruleJson["nm"] | rules[i_ru].name,
-            sizeof(rules[i_ru].name));
     rules[i_ru].conditionGroup = ruleJson["cg"] | rules[i_ru].conditionGroup;
     rules[i_ru].actionGroup = ruleJson["ag"] | rules[i_ru].actionGroup;
     rules[i_ru].status = ruleJson["s"] | rules[i_ru].status;
@@ -400,3 +382,4 @@ void setupWebServer() {
   server.begin();  // Start the server
   Serial.println("Web server started");
 }
+// --- End Web Server Setup ---

@@ -85,7 +85,6 @@ struct IOVariable {
 // Represents a single condition to be evaluated
 struct condition {
   uint8_t conNum;     // Unique ID for this condition
-  char name[20];      // User-defined name
   dataTypes Type;     // Type of the target IOVariable to check
   uint8_t targetNum;  // 'num' of the target IOVariable to check
   comparisons comp;   // Comparison operation to perform
@@ -96,7 +95,6 @@ struct condition {
 // Represents a single action to be performed
 struct action {
   uint8_t actNum;     // Unique ID for this action
-  char name[20];      // User-defined name
   dataTypes Type;     // Type of the target IOVariable to affect
   uint8_t targetNum;  // 'num' of the target IOVariable to affect
   actionType action;  // Action to perform (e.g., set, setValue)
@@ -107,11 +105,7 @@ struct action {
 // Groups multiple conditions together with a combining logic
 struct conditionGroup {
   uint8_t num;                                       // Unique ID for this group
-  char name[20];                                     // User-defined name
   uint8_t conditionArray[MAX_CONDITIONS_PER_GROUP];  // Array of 'conNum's
-
-  // Runtime state:
-  bool resultArray[MAX_CONDITIONS_PER_GROUP];
   // Configuration:
   combineLogic Logic;  // Logic used to combine results (AND/OR)
   bool status;         // Is this group definition active/enabled?
@@ -120,7 +114,6 @@ struct conditionGroup {
 // Groups multiple actions together to be executed sequentially
 struct actionGroup {
   uint8_t num;                                 // Unique ID for this group
-  char name[20];                               // User-defined name
   uint8_t actionArray[MAX_ACTIONS_PER_GROUP];  // Array of 'actNum's
   bool status;  // Is this group definition active/enabled?
 };
@@ -128,11 +121,9 @@ struct actionGroup {
 // Represents a rule linking a Condition Group to an Action Group
 struct rule {
   uint8_t num;             // Unique ID for this rule
-  char name[20];           // User-defined name
   uint8_t conditionGroup;  // 'num' of the Condition Group to evaluate
-  uint8_t
-      actionGroup;  // 'num' of the Action Group to execute if conditions met
-  bool status;      // Is this rule definition active/enabled?
+  uint8_t actionGroup;     // 'num' of the Action Group to execute
+  bool status;             // Is this rule definition active/enabled?
 };
 // --- End Struct Definitions ---
 

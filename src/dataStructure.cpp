@@ -94,8 +94,6 @@ void CreateDefaultIOVariables() {
 void InitializeDefaultLogicComponents() {
   for (uint8_t i = 0; i < MAX_CONDITIONS; i++) {
     conditions[i].conNum = i + 1;
-    snprintf(conditions[i].name, sizeof(conditions[i].name), "Condition %d",
-             i + 1);
     conditions[i].Type = SoftIO;
     conditions[i].targetNum = 0;
     conditions[i].comp = isTrue;
@@ -104,18 +102,14 @@ void InitializeDefaultLogicComponents() {
   }
   for (uint8_t i = 0; i < MAX_CONDITION_GROUPS; i++) {
     conditionGroups[i].num = i + 1;
-    snprintf(conditionGroups[i].name, sizeof(conditionGroups[i].name),
-             "Condition Group %d", i + 1);
-    for (uint8_t j = 0; MAX_CONDITIONS_PER_GROUP < 10; j++) {
+    for (uint8_t j = 0; j < MAX_CONDITIONS_PER_GROUP; j++) {
       conditionGroups[i].conditionArray[j] = 0;
-      conditionGroups[i].resultArray[j] = false;
     }
     conditionGroups[i].Logic = andLogic;
     conditionGroups[i].status = false;
   }
   for (uint8_t i = 0; i < MAX_ACTIONS; i++) {
     actions[i].actNum = i + 1;
-    snprintf(actions[i].name, sizeof(actions[i].name), "Action %d", i + 1);
     actions[i].Type = SoftIO;
     actions[i].targetNum = 0;
     actions[i].action = set;
@@ -124,8 +118,6 @@ void InitializeDefaultLogicComponents() {
   }
   for (uint8_t i = 0; i < MAX_ACTION_GROUPS; i++) {
     actionGroups[i].num = i + 1;
-    snprintf(actionGroups[i].name, sizeof(actionGroups[i].name),
-             "Action Group %d", i + 1);
     for (uint8_t j = 0; j < MAX_ACTIONS_PER_GROUP; j++) {
       actionGroups[i].actionArray[j] = 0;
     }
@@ -133,7 +125,6 @@ void InitializeDefaultLogicComponents() {
   }
   for (uint8_t i = 0; i < MAX_RULES; i++) {
     rules[i].num = i + 1;
-    snprintf(rules[i].name, sizeof(rules[i].name), "Rule %d", i + 1);
     rules[i].conditionGroup = 0;
     rules[i].actionGroup = 0;
     rules[i].status = false;
