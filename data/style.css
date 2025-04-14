@@ -1,0 +1,66 @@
+/* style.css */
+
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    background-color: #f0e6fa;
+    /* background-color: #f4ebf6; */
+    /* border: none; */
+}
+
+.card-header {
+    background-color: #8d24aa;
+    color: #ffffff;
+}
+
+/* --- Button Styling --- */
+.btn-success {
+    background-color: #8E24AA;
+    border-color: #8E24AA;
+    color: #ffffff;
+}
+
+/* Style for when hovering over the button */
+.btn-success:hover {
+    background-color: #7B1FA2;
+    border-color: #7B1FA2;
+    color: #ffffff;
+}
+
+/* Style for when the button is clicked */
+.btn-success:active {
+    background-color: #6A1B9A !important;
+    border-color: #6A1B9A !important;
+    color: #ffffff !important;
+}
+
+/* Style for when the button has focus (e.g., after clicking or tabbing) */
+.btn-success:focus {
+    box-shadow: 0 0 0 0.25rem rgba(142, 36, 170, 0.5);
+}
+
+/* --- Form Control Styling --- */
+.form-control:focus {
+    border-color: #AA6EC4;
+    box-shadow: 0 0 0 0.25rem rgba(142, 36, 170, 0.3);
+}
+
+/* --- Toggle Switch Styling --- */
+.form-check-input:checked {
+    background-color: #8E24AA;
+    border-color: #8E24AA;
+}
+
+/* Optional: Style the focus ring for the switch too */
+.form-check-input:focus {
+    border-color: #AA6EC4;
+    box-shadow: 0 0 0 0.25rem rgba(142, 36, 170, 0.3);
+}
+
+/* --- Footer Styling --- */
+footer {
+    background-color: #495057;
+    color: #f8f9fa;
+}

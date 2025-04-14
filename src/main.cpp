@@ -17,6 +17,7 @@ void networkTaskFunction(void *pvParameters);
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("\nBooting Advanced Timer...");  // Add boot message
   xTaskCreatePinnedToCore(networkTaskFunction, "networkTask",
                           32768,  // Increased stack size
                           NULL, 1, &networkTask, 0);
@@ -29,13 +30,28 @@ void loop() {
   esp_task_wdt_reset();
 }
 
-void networkTaskFunction(void *pvParameters) {
-  initiateConfig();
-  Serial.println(generateJsonConfigString());
+unsigned long futureTime = 0;  // Used to disable AP Mode
+bool apModeEnabled = false;
 
+void networkTaskFunction(void *pvParameters) {
   esp_task_wdt_init(wdtTimeout, true);
   esp_task_wdt_add(NULL);
+
+  initiateConfig();
+  bool wifiConnected = initiateWiFi();
+  if (!wifiConnected) {
+    futureTime = millis() + 300000;  // 5 minutes from now
+    apModeEnabled = true;
+  }
+
+  setupWebServer();
+
   for (;;) {
+    if (millis() > futureTime && apModeEnabled) {
+      futureTime = millis();
+      WiFi.mode(WIFI_MODE_NULL);
+    }
+
     delay(1000);
     esp_task_wdt_reset();
   }

@@ -21,7 +21,63 @@
         </div>
     </header>
 
-    <footer class="text-center py-3 bg-light mt-4">
+    <!-- Main Content Area -->
+    <main class="container mt-4">
+        <!-- Placeholder for future columns/cards -->
+        <!-- <div class="row"> -->
+        <!-- IOVariables Column -->
+        <!-- Condition/Action Column -->
+        <!-- Group Column -->
+        <!-- Rules Column -->
+        <!-- </div> -->
+
+        <!-- Device Settings Card -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Device Settings</h5>
+            </div>
+            <div class="card-body">
+                <form id="device-settings-form">
+                    <div class="mb-3 row">
+                        <label for="deviceName" class="col-sm-3 col-form-label">Device Name:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="deviceName" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="wifiSSID" class="col-sm-3 col-form-label">WiFi SSID:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="wifiSSID" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="wifiPassword" class="col-sm-3 col-form-label">WiFi Password:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="wifiPassword">
+                            <!-- Changed type to text to make it visible -->
+                        </div>
+                    </div>
+                    <div class="mb-3 row align-items-center">
+                        <label class="col-sm-3 col-form-label">Run Program:</label>
+                        <div class="col-sm-9">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="runProgram">
+                                <label class="form-check-label" for="runProgram">Enable</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Save Button Section -->
+        <div class="text-center mb-4">
+            <button type="button" class="btn btn-success btn-lg shadow-sm" id="saveConfigBtn">Save Configuration &
+                Restart</button>
+        </div>
+    </main>
+
+    <footer class="text-center py-3 mt-4">
         <p>&copy; 2025 Advanced Timer</p>
     </footer>
 
