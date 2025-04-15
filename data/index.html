@@ -493,11 +493,25 @@
                         <!-- Hidden field to store the condition number being edited (0 for new) -->
                         <input type="hidden" id="conditionEditNum" value="0">
 
-                        <div class="mb-3">
-                            <label class="form-label">Target IO Variable:</label>
-                            <input type="text" class="form-control" id="conditionTargetDisplay" disabled readonly>
-                            <!-- We'll populate this dynamically -->
+                        <!-- Row for Target IO Display and Delete Button -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div> <!-- Left side: Label and Target -->
+                                <label class=" mb-0 me-2">Target IO:</label>
+                                <span id="displayConditionTarget" class="fw-bold"></span> <!-- JS will populate this -->
+                            </div>
+                            <div> <!-- Right side: Delete Button -->
+                                <button type="button" class="btn btn-sm btn-danger" id="deleteConditionBtn"
+                                    style="display: none;"> <!-- Initially hidden -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-trash-fill" viewBox="0 0 16 16">
+                                        <path
+                                            d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
                         </div>
+
 
                         <div class="mb-3">
                             <label for="conditionComparison" class="form-label">Comparison:</label>

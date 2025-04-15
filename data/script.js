@@ -187,7 +187,7 @@ function populateIoVariables(ioVariables) {
             // Set the innerHTML using a template literal for readability
             listItem.innerHTML = `
                 <!-- 1. Input Number (Left) -->
-                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <span class="io-number fs-5 fw-bold me-2">I${io.n}</span>
 
                 <!-- 2. Name & Indicators Group (Takes remaining space, Middle) -->
                 <div class="flex-grow-1 me-2">
@@ -233,7 +233,7 @@ function populateIoVariables(ioVariables) {
             const flagTitle = io.f ? 'True' : 'False';
 
             listItem.innerHTML = `
-                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <span class="io-number fs-5 fw-bold me-2">O${io.n}</span>
                 <div class="flex-grow-1 me-2">
                     <div class="io-name small ">${io.nm || `Output ${io.n}`}</div>
                     <div class="io-indicators">
@@ -276,7 +276,7 @@ function populateIoVariables(ioVariables) {
 
             // --- Construct inner HTML (matches DI/DO structure) ---
             listItem.innerHTML = `
-                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <span class="io-number fs-5 fw-bold me-2">A${io.n}</span>
                 <div class="flex-grow-1 me-2">
                     <div class="io-name small ">${io.nm || `Analog In ${io.n}`}</div>
                     <div class="io-indicators">
@@ -315,7 +315,7 @@ function populateIoVariables(ioVariables) {
             const flagTitle = io.f ? 'True' : 'False';
 
             listItem.innerHTML = `
-                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <span class="io-number fs-5 fw-bold me-2">S${io.n}</span>
                 <div class="flex-grow-1 me-2">
                     <div class="io-name small ">${io.nm || `Soft IO ${io.n}`}</div>
                     <div class="io-indicators">
@@ -352,7 +352,7 @@ function populateIoVariables(ioVariables) {
             const flagTitle = io.f ? 'Expired' : 'Reset/Not Expired';
 
             listItem.innerHTML = `
-                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <span class="io-number fs-5 fw-bold me-2">T${io.n}</span>
                 <div class="flex-grow-1 me-2">
                     <div class="io-name small ">${io.nm || `Timer ${io.n}`}</div>
                     <div class="io-indicators">
@@ -575,7 +575,6 @@ function initializeDragAndDrop() {
         return;
     }
 
-    // --- Initialize Sortable for Digital Inputs List (Source) ---
     new Sortable(diList, {
         group: {
             name: 'io-logic',
@@ -585,8 +584,6 @@ function initializeDragAndDrop() {
         animation: 150,
         sort: false
     });
-
-    // --- Initialize Sortable for Digital Outputs List (Source) --- // <-- ADD THIS BLOCK
     new Sortable(doList, {
         group: {
             name: 'io-logic', // Same group name allows dragging DOs too
@@ -672,16 +669,33 @@ function populateConditionModal(ioVariable) {
     }
     const modal = new bootstrap.Modal(modalElement); // Get Bootstrap modal instance
 
+    // --- Get references to elements that need resetting for "Create" mode ---
+    const modalTitle = document.getElementById('createConditionModalLabel');
+    const deleteButton = document.getElementById('deleteConditionBtn');
+    const saveButton = document.getElementById('saveConditionBtn');
+    const editNumHidden = document.getElementById('conditionEditNum');
+    const targetDisplaySpan = document.getElementById('displayConditionTarget'); // Get the new span
+
+    // --- Reset modal to "Create" state ---
+    modalTitle.textContent = 'Create New Condition'; // Default title
+    deleteButton.style.display = 'none'; // Hide delete button
+    saveButton.textContent = 'Save Condition'; // Default save button text
+    editNumHidden.value = '0'; // Set edit number to 0 for new condition
+    targetDisplaySpan.textContent = ''; // Clear the target display span initially
+
+
     // --- Reset form elements ---
     const form = document.getElementById('create-condition-form');
     form.reset(); // Reset standard form inputs
-    document.getElementById('conditionEditNum').value = '0'; // Explicitly set to 0 for new condition
+    // document.getElementById('conditionEditNum').value = '0'; // Explicitly set to 0 for new condition
     document.getElementById('conditionValueGroup').style.display = 'none'; // Hide value input initially
 
     // --- Populate hidden fields and display ---
     document.getElementById('conditionTargetIoType').value = dataTypesMap[ioVariable.t];
     document.getElementById('conditionTargetIoNum').value = ioVariable.n;
-    document.getElementById('conditionTargetDisplay').value = `${dataTypesMap[ioVariable.t]} #${ioVariable.n}: ${ioVariable.nm}`;
+    // document.getElementById('conditionTargetDisplay').value = `${dataTypesMap[ioVariable.t]} #${ioVariable.n}: ${ioVariable.nm}`;
+    targetDisplaySpan.textContent = `${dataTypesMap[ioVariable.t]} #${ioVariable.n}: ${ioVariable.nm || `IO ${ioVariable.n}`}`;
+
 
     // --- Dynamically populate comparison options ---
     const comparisonSelect = document.getElementById('conditionComparison');
@@ -712,7 +726,7 @@ function populateConditionModal(ioVariable) {
 }
 
 
-// Function to handle saving the new condition from the modal
+// Function to handle saving a new or updated condition from the modal
 function saveCondition() {
     const modalElement = document.getElementById('createConditionModal');
     const form = document.getElementById('create-condition-form');
@@ -725,6 +739,7 @@ function saveCondition() {
     const conditionValue = conditionValueInput.parentElement.style.display !== 'none'
         ? parseInt(conditionValueInput.value, 10) || 0 // Use 0 if parsing fails or hidden
         : 0; // Default to 0 if value field is hidden
+    const editConNum = parseInt(document.getElementById('conditionEditNum').value, 10); // *** Get the condition number being edited ***
 
     // --- Basic Validation ---
     if (!targetIoTypeStr || isNaN(targetIoNum) || comparisonValue === "") {
@@ -739,30 +754,48 @@ function saveCondition() {
         return;
     }
 
-    // --- Find the first available (inactive) condition slot ---
-    let conditionIndex = -1;
-    for (let i = 0; i < currentConfig.conditions.length; i++) {
-        if (!currentConfig.conditions[i].s) { // Find first where status (s) is false
-            conditionIndex = i;
-            break;
-        }
-    }
+    let conditionToUpdate = null;
+    let isNewCondition = false;
 
-    if (conditionIndex === -1) {
-        alert("Error: Maximum number of conditions reached.");
-        // TODO: Potentially increase MAX_CONDITIONS if needed, or provide better feedback
-        return;
+    // --- Determine if creating new or editing existing ---
+    if (editConNum > 0) {
+        // --- Editing existing condition ---
+        conditionToUpdate = currentConfig.conditions.find(c => c.cn === editConNum);
+        if (!conditionToUpdate) {
+            alert(`Error: Could not find Condition C${editConNum} to update.`);
+            console.error(`Save failed: Condition C${editConNum} not found in currentConfig.`);
+            return;
+        }
+        console.log(`Updating existing Condition C${editConNum}`);
+    } else {
+        // --- Creating new condition ---
+        isNewCondition = true;
+        // Find the first available (inactive) condition slot
+        let conditionIndex = -1;
+        for (let i = 0; i < currentConfig.conditions.length; i++) {
+            if (!currentConfig.conditions[i].s) { // Find first where status (s) is false
+                conditionIndex = i;
+                break;
+            }
+        }
+
+        if (conditionIndex === -1) {
+            alert("Error: Maximum number of conditions reached. Cannot create new condition.");
+            // TODO: Potentially increase MAX_CONDITIONS if needed, or provide better feedback
+            return;
+        }
+        conditionToUpdate = currentConfig.conditions[conditionIndex];
+        console.log(`Creating new condition in slot C${conditionToUpdate.cn}`);
     }
 
     // --- Update the condition object in currentConfig ---
-    const conditionToUpdate = currentConfig.conditions[conditionIndex];
     conditionToUpdate.t = parseInt(targetIoTypeNum, 10); // Numeric type
     conditionToUpdate.tn = targetIoNum;
     conditionToUpdate.cp = parseInt(comparisonValue, 10); // Numeric comparison enum
     conditionToUpdate.v = conditionValue;
-    conditionToUpdate.s = true; // Set status to active
+    conditionToUpdate.s = true; // Ensure status is active (important for both create and update)
 
-    console.log(`Saved new condition at index ${conditionIndex}:`, conditionToUpdate);
+    console.log(`Saved condition C${conditionToUpdate.cn}:`, conditionToUpdate);
 
     // --- Close the modal ---
     const modalInstance = bootstrap.Modal.getInstance(modalElement);
@@ -770,9 +803,10 @@ function saveCondition() {
         modalInstance.hide();
     }
 
-    // --- Refresh the conditions list display (we'll create this next) ---
+    // --- Refresh the conditions list display ---
     displayConditions();
 }
+
 
 
 // Function to display active conditions in the UI list (NEW 3-BADGE VERSION)
@@ -819,9 +853,12 @@ function displayConditions() {
                         <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-danger delete-condition-btn fs-6 p-1" title="Delete Condition ${cond.cn}">
-                    🗑️
+                <button class="btn btn-sm btn-outline-secondary edit-condition-btn fs-6 p-1" title="Edit Condition C${cond.cn}"
+                    data-bs-toggle="modal" data-bs-target="#createConditionModal"
+                    data-con-num="${cond.cn}">
+                    ⚙️
                 </button>
+
             `;
 
             // Add the fully constructed list item to the list
@@ -831,22 +868,84 @@ function displayConditions() {
     });
 
     // --- Attach listeners to the newly created delete buttons ---
-    attachDeleteConditionListeners(); // Make sure this function exists and works
+    // attachDeleteConditionListeners(); // Make sure this function exists and works
+    attachEditConditionListeners();
 }
 
 // Ensure these helper functions for delete exist (from previous step or add them now)
-function attachDeleteConditionListeners() {
-    document.querySelectorAll('.delete-condition-btn').forEach(button => {
-        // Remove existing listener first to prevent duplicates if function is called multiple times
-        button.removeEventListener('click', handleDeleteConditionClick);
-        button.addEventListener('click', handleDeleteConditionClick);
+// function attachDeleteConditionListeners() {
+//     document.querySelectorAll('.delete-condition-btn').forEach(button => {
+//         // Remove existing listener first to prevent duplicates if function is called multiple times
+//         button.removeEventListener('click', handleDeleteConditionClick);
+//         button.addEventListener('click', handleDeleteConditionClick);
+//     });
+// }
+
+// function handleDeleteConditionClick(event) {
+//     const button = event.currentTarget;
+//     const listItem = button.closest('.condition-item');
+//     const conNum = parseInt(listItem.dataset.conNum, 10);
+
+//     if (confirm(`Are you sure you want to delete Condition C${conNum}? This will mark it inactive.`)) {
+//         // Find the condition in the config
+//         const condition = currentConfig.conditions.find(c => c.cn === conNum);
+//         if (condition) {
+//             condition.s = false; // Mark as inactive
+//             // IMPORTANT TODO: Also need to remove this condition's conNum from any conditionGroups that use it.
+//             // This requires iterating through currentConfig.conditionGroups and modifying their 'ca' arrays.
+//             // We will handle this logic later when implementing group editing.
+//             console.log(`Marked Condition C${conNum} as inactive.`);
+//             displayConditions(); // Refresh the list
+//             // Note: Changes are only in memory until "Save Configuration" is clicked.
+//         } else {
+//             console.error(`Could not find Condition C${conNum} to mark inactive.`);
+//         }
+//     }
+// }
+
+// Function to attach listeners to condition edit buttons
+function attachEditConditionListeners() {
+    document.querySelectorAll('.edit-condition-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates
+        button.removeEventListener('click', handleEditConditionClick);
+        // Add the listener
+        button.addEventListener('click', handleEditConditionClick);
     });
 }
 
-function handleDeleteConditionClick(event) {
+// Handler for when a condition edit button (⚙️) is clicked
+function handleEditConditionClick(event) {
     const button = event.currentTarget;
-    const listItem = button.closest('.condition-item');
-    const conNum = parseInt(listItem.dataset.conNum, 10);
+    const conNum = parseInt(button.dataset.conNum, 10);
+
+    console.log(`Edit button clicked for Condition C${conNum}`); // Placeholder log
+
+    const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s); // Find the active condition
+
+    if (condition) {
+        // *** Call the function to populate the modal for editing ***
+        populateConditionModalForEdit(condition);
+    } else {
+        console.error(`Could not find active Condition data for: C${conNum}`);
+        alert("Error: Could not load condition data for editing.");
+        event.stopPropagation(); // Stop the modal from opening if data isn't found
+    }
+
+    // Note: The modal is shown automatically by data-bs-toggle attribute on the button
+    // unless we stop propagation.
+}
+
+// Function to handle deleting (marking inactive) a condition from the modal
+function handleDeleteCondition() {
+    const modalElement = document.getElementById('createConditionModal');
+    const editConNumInput = document.getElementById('conditionEditNum');
+    const conNum = parseInt(editConNumInput.value, 10);
+
+    if (isNaN(conNum) || conNum <= 0) {
+        console.error("Invalid condition number found for deletion:", editConNumInput.value);
+        alert("Error: Cannot determine which condition to delete.");
+        return;
+    }
 
     if (confirm(`Are you sure you want to delete Condition C${conNum}? This will mark it inactive.`)) {
         // Find the condition in the config
@@ -857,13 +956,99 @@ function handleDeleteConditionClick(event) {
             // This requires iterating through currentConfig.conditionGroups and modifying their 'ca' arrays.
             // We will handle this logic later when implementing group editing.
             console.log(`Marked Condition C${conNum} as inactive.`);
-            displayConditions(); // Refresh the list
+
+            // Close the modal
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            // Refresh the list
+            displayConditions();
             // Note: Changes are only in memory until "Save Configuration" is clicked.
         } else {
             console.error(`Could not find Condition C${conNum} to mark inactive.`);
+            alert(`Error: Could not find Condition C${conNum} to delete.`);
         }
     }
 }
+
+
+// Function to populate and show the Create/Edit Condition modal FOR EDITING
+function populateConditionModalForEdit(condition) {
+    const modalElement = document.getElementById('createConditionModal');
+    if (!modalElement) {
+        console.error("Create/Edit Condition Modal element not found!");
+        return;
+    }
+    // Note: Modal instance is usually handled by the button click, but good to have reference
+    // const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+
+    // --- Get references to modal elements ---
+    const modalTitle = document.getElementById('createConditionModalLabel');
+    const form = document.getElementById('create-condition-form');
+    const targetIoTypeHidden = document.getElementById('conditionTargetIoType');
+    const targetIoNumHidden = document.getElementById('conditionTargetIoNum');
+    const editNumHidden = document.getElementById('conditionEditNum');
+    const targetDisplaySpan = document.getElementById('displayConditionTarget');
+    const comparisonSelect = document.getElementById('conditionComparison');
+    const valueGroup = document.getElementById('conditionValueGroup');
+    const valueInput = document.getElementById('conditionValue');
+    const deleteButton = document.getElementById('deleteConditionBtn');
+    const saveButton = document.getElementById('saveConditionBtn');
+
+    // --- Reset form (good practice before populating) ---
+    form.reset(); // Resets standard inputs, select needs manual setting
+
+    // --- Populate fields with existing condition data ---
+    modalTitle.textContent = `Edit Condition C${condition.cn}`; // Set title for editing
+    editNumHidden.value = condition.cn; // Store the condition number being edited
+
+    // Find the target IO variable details
+    const targetIo = currentConfig.ioVariables.find(io => io.t === condition.t && io.n === condition.tn);
+    const targetIoName = targetIo ? targetIo.nm : `IO ${condition.tn}`;
+    const targetIoTypeStr = dataTypesMap[condition.t] || `Type ${condition.t}`;
+
+    targetIoTypeHidden.value = targetIoTypeStr;
+    targetIoNumHidden.value = condition.tn;
+    targetDisplaySpan.textContent = `${targetIoTypeStr} #${condition.tn}: ${targetIoName}`; // Set the display span
+
+    // --- Populate and select the comparison dropdown ---
+    // (We reuse the logic from populateConditionModal but add selection)
+    comparisonSelect.innerHTML = '<option value="" disabled>-- Select Comparison --</option>'; // Clear existing
+    const options = [ // Same options as before
+        { value: 0, text: 'is True (State)' },
+        { value: 1, text: 'is False (State)' },
+        { value: 2, text: 'is Equal To (Value)' },
+        { value: 3, text: 'is Less Than (Value)' },
+        { value: 4, text: 'is Greater Than (Value)' },
+        { value: 5, text: 'Flag is True' },
+        { value: 6, text: 'Flag is False' }
+    ];
+    options.forEach(opt => {
+        const optionElement = document.createElement('option');
+        optionElement.value = opt.value;
+        optionElement.textContent = opt.text;
+        comparisonSelect.appendChild(optionElement);
+    });
+    comparisonSelect.value = condition.cp; // *** Select the condition's comparison type ***
+
+    // --- Populate and show/hide the value input ---
+    valueInput.value = condition.v; // Set the value
+    if ([2, 3, 4].includes(condition.cp)) { // Show if comparison uses value
+        valueGroup.style.display = 'block';
+    } else {
+        valueGroup.style.display = 'none';
+    }
+
+    // --- Adjust modal appearance for editing ---
+    deleteButton.style.display = 'block'; // *** Show the delete button ***
+    saveButton.textContent = 'Update Condition'; // Change save button text
+
+    // Note: The modal should be shown automatically by the button's data-bs-toggle attribute
+    // modal.show(); // Usually not needed here
+}
+
 
 // --- NEW: Function to populate the Digital Input Edit Modal ---
 // (Moved logic from handleEditButtonClick here for clarity)
@@ -1214,6 +1399,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saveTimerBtn) {
         saveTimerBtn.addEventListener('click', saveTimerVariableChanges); // Call Timer save function
     }
+    const deleteConditionButton = document.getElementById('deleteConditionBtn');
+    if (deleteConditionButton) {
+        deleteConditionButton.addEventListener('click', handleDeleteCondition); // Attach the delete handler
+    }
+
 
     // --- ADD THESE LISTENERS BACK ---
     // Listener for the Condition Comparison dropdown

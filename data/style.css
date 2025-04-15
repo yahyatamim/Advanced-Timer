@@ -146,6 +146,12 @@ footer {
     flex-shrink: 0;
     /* Prevent number from shrinking */
 }
+.io-number {
+    color: #6c757d;
+    /* Grey color for the number */
+    flex-shrink: 0;
+    /* Prevent number from shrinking */
+}
 
 .condition-target-name {
     font-weight: 500;
@@ -239,4 +245,10 @@ footer {
     /* Adjust label alignment if needed */
     font-size: 1rem;
     /* Ensure label size is appropriate */
+}
+
+/* Remove border from condition edit icon button */
+.edit-condition-btn {
+    border: none;
+    /* Override the default outline border */
 }
