@@ -24,8 +24,8 @@ const operationModeShortMap = {
     0: 'None', // Default/Raw/Volatile
     1: 'Rise', // DI
     2: 'Fall', // DI
-    3: 'StCh', // DI (Changed from StCn for clarity)
-    4: 'Puls', // DO
+    3: 'StCh', // DI 
+    4: 'Puls', // DO  
     5: 'Once', // Timer
     6: 'Rept', // Timer
     8: 'Scle', // AI
@@ -126,15 +126,17 @@ function populateDeviceSettingsForm(settings) {
 // Function to populate the IO Variables lists (starting with Digital Inputs)
 function populateIoVariables(ioVariables) {
     const diList = document.getElementById('digital-inputs-list');
+    const doList = document.getElementById('digital-outputs-list');
     // Add other list elements later (doList, aiList, etc.)
 
-    if (!diList) {
-        console.error("Element with ID 'digital-inputs-list' not found!");
+    if (!diList || !doList) {
+        console.error("Required IO list element(s) not found!");
         return; // Exit if the list element doesn't exist
     }
 
     // Clear existing items before adding new ones
     diList.innerHTML = '';
+    doList.innerHTML = '';
     // Clear other lists later (e.g., doList.innerHTML = '';)
 
     if (!ioVariables || !Array.isArray(ioVariables)) {
@@ -206,9 +208,46 @@ function populateIoVariables(ioVariables) {
             // Add the fully constructed list item to the list in the HTML
             diList.appendChild(listItem);
         }
-        // Add 'else if' blocks here later for other IO types (DigitalOutput, AnalogInput, etc.)
-        // else if (io.t === 1) { /* Handle Digital Outputs */ }
+        else if (io.t === 1) { // 1 corresponds to DigitalOutput
+            const listItem = document.createElement('li');
+            listItem.className = `list-group-item py-2 px-2 d-flex justify-content-between align-items-center io-variable-item ${!io.s ? 'inactive' : ''}`;
+            listItem.dataset.type = dataTypesMap[io.t]; // Stores "DigitalOutput"
+            listItem.dataset.num = io.n;
+
+            const modeShort = operationModeShortMap[io.m] || '?';
+            const modeTitle = operationModeMap[io.m] || 'Unknown Mode';
+            const stateText = io.st ? 'On' : 'Off';
+            const stateBg = io.st ? 'bg-success' : 'bg-danger';
+            const stateTitle = io.st ? 'True/HIGH' : 'False/LOW';
+            const valueText = io.v; // DOs might just use 0/1 for value, but display it anyway
+            const valueBg = 'bg-info text-dark';
+            const valueTitle = `Value: ${io.v}`;
+            const flagText = io.f ? 'Fl' : 'Cl'; // Assuming DOs might have flags too
+            const flagBg = io.f ? 'bg-warning text-dark' : 'bg-light text-dark';
+            const flagTitle = io.f ? 'True' : 'False';
+
+            listItem.innerHTML = `
+                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <div class="flex-grow-1 me-2">
+                    <div class="io-name small ">${io.nm || `Output ${io.n}`}</div>
+                    <div class="io-indicators">
+                        <span class="badge ${stateBg}" title="State: ${stateTitle}">${stateText}</span>
+                        <span class="badge ${valueBg}" title="${valueTitle}">${valueText}</span>
+                        <span class="badge ${flagBg}" title="Flag: ${flagTitle}">${flagText}</span>
+                        <span class="badge bg-secondary" title="Mode: ${modeTitle}">${modeShort}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary edit-io-btn fs-6 p-1" title="Edit"
+                        data-bs-toggle="modal" data-bs-target="#editDoVariableModal" 
+                        data-type="${dataTypesMap[io.t]}" data-num="${io.n}">
+                    ⚙️
+                </button>
+            `;
+            doList.appendChild(listItem); // <-- Append to doList
+        }
+        // Add 'else if' blocks here later for other IO types (AnalogInput, etc.)
         // else if (io.t === 2) { /* Handle Analog Inputs */ }
+
     });
 
     // After populating, attach event listeners to the new edit buttons
@@ -230,36 +269,24 @@ function attachEditButtonListeners() {
 
 // Handler for when an edit button is clicked
 function handleEditButtonClick(event) {
-    const button = event.currentTarget; // Get the button that was clicked
-    const typeStr = button.dataset.type; // Get "DigitalInput" from data-type attribute
-    const num = parseInt(button.dataset.num, 10); // Get the number (e.g., 1) from data-num attribute
+    const button = event.currentTarget;
+    const typeStr = button.dataset.type; // "DigitalInput" or "DigitalOutput"
+    const num = parseInt(button.dataset.num, 10);
 
-    // Find the specific IOVariable object in our global currentConfig array
     const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === typeStr && io.n === num);
 
     if (ioVariable) {
-        // Get the modal element
-        const modal = document.getElementById('editIoVariableModal');
-
-        // --- Populate the modal's form fields ---
-        // Set modal title
-        modal.querySelector('#editIoVariableModalLabel').textContent = `Edit ${typeStr} #${num}`;
-
-        // Store identifiers in hidden fields for later saving
-        modal.querySelector('#editIoType').value = typeStr;
-        modal.querySelector('#editIoNum').value = num;
-
-        // Display the Input Number in the span
-        modal.querySelector('#displayIoDiNum').textContent = num; // Use textContent for a span
-
-        // Populate the editable fields
-        modal.querySelector('#editIoName').value = ioVariable.nm; // Set the name input
-        modal.querySelector('#editIoMode').value = ioVariable.m; // Set the mode dropdown selection
-        modal.querySelector('#editIoStatus').checked = ioVariable.s; // Set the enable/disable switch state
-
-        // Note: The modal is shown automatically because the button has data-bs-toggle="modal"
+        // --- Determine which modal to populate ---
+        if (typeStr === 'DigitalInput') {
+            populateDiEditModal(ioVariable); // Use a dedicated function
+        } else if (typeStr === 'DigitalOutput') {
+            populateDoEditModal(ioVariable); // Use a dedicated function
+        } else {
+            console.warn(`Edit button clicked for unhandled IO type: ${typeStr}`);
+            alert(`Editing for ${typeStr} is not yet implemented.`);
+        }
+        // Note: The modal is shown automatically by data-bs-toggle attribute on the button
     } else {
-        // This shouldn't happen if data attributes are correct, but good to have a check
         console.error(`Could not find IOVariable data for: ${typeStr} #${num}`);
         alert("Error: Could not load data for editing.");
     }
@@ -408,69 +435,73 @@ async function saveConfig() {
 // Function to initialize drag-and-drop functionality
 function initializeDragAndDrop() {
     const diList = document.getElementById('digital-inputs-list');
+    const doList = document.getElementById('digital-outputs-list'); // <-- GET DO LIST
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
     // Get other lists/zones later as needed
 
-    if (!diList || !conditionsDropZone) {
+    if (!diList || !doList || !conditionsDropZone) { // <-- UPDATE CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
 
-    // --- Initialize Sortable for the IO Variables List (Source) ---
-    // Allows items to be dragged FROM this list
+    // --- Initialize Sortable for Digital Inputs List (Source) ---
     new Sortable(diList, {
         group: {
-            name: 'io-logic', // Shared group name
-            pull: 'clone',    // Clone the item when dragging out
-            put: false        // Do not allow dropping items INTO this list from others
+            name: 'io-logic',
+            pull: 'clone',
+            put: false
         },
         animation: 150,
-        sort: false // Disable sorting within the IO Variables list itself
+        sort: false
     });
 
-    // --- Initialize Sortable for the Conditions Drop Zone (Target) ---
-    // Allows items to be dropped INTO this zone
-    new Sortable(conditionsDropZone, {
+    // --- Initialize Sortable for Digital Outputs List (Source) --- // <-- ADD THIS BLOCK
+    new Sortable(doList, {
         group: {
-            name: 'io-logic', // Shared group name
-            pull: false,      // Do not allow dragging items OUT of this zone (it's just a drop target)
-            put: true         // Allow items from the 'io-logic' group to be dropped here
+            name: 'io-logic', // Same group name allows dragging DOs too
+            pull: 'clone',
+            put: false
         },
         animation: 150,
-        sort: false, // Disable sorting within the drop zone itself
-        onAdd: function (evt) {
-            // This function runs when an item is dropped INTO this zone
-            const itemEl = evt.item; // The dragged element (the clone)
-            const originalList = evt.from; // The list the item came from (e.g., diList)
+        sort: false
+    });
+    // --- END ADDED BLOCK ---
 
-            // Extract data from the dropped item
+    // --- Initialize Sortable for the Conditions Drop Zone (Target) ---
+    new Sortable(conditionsDropZone, {
+        group: {
+            name: 'io-logic', // Allows dropping from DI or DO list
+            pull: false,
+            put: true
+        },
+        animation: 150,
+        sort: false,
+        onAdd: function (evt) {
+            // This existing onAdd function should work fine as it reads
+            // data attributes (type, num) which are set correctly for both DI and DO.
+            const itemEl = evt.item;
+            const originalList = evt.from;
             const ioType = itemEl.dataset.type;
             const ioNum = itemEl.dataset.num;
 
             console.log(`Dropped IO Variable: Type=${ioType}, Num=${ioNum} onto Conditions zone.`);
+            itemEl.remove(); // Remove the clone
 
-            // --- IMPORTANT: Remove the visual clone from the drop zone ---
-            // We don't want the IO Variable item to *stay* here visually.
-            // The drop is just the trigger to start creating a condition.
-            itemEl.remove();
-
-            // --- Find the IO Variable object ---
             const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === ioType && io.n === parseInt(ioNum, 10));
 
             if (ioVariable) {
-                // --- Populate and show the modal ---
-                populateConditionModal(ioVariable); // Call the new helper function
+                // The existing populateConditionModal should also work fine,
+                // as it just displays the type/num/name it receives.
+                populateConditionModal(ioVariable);
             } else {
                 console.error(`Could not find IOVariable data for: ${ioType} #${ioNum} after drop.`);
                 alert("Error: Could not find the dropped IO Variable's data.");
             }
-
-
         }
     });
 
-    // Add initialization for other lists/zones later (e.g., actions drop zone, groups)
-    console.log("Drag and drop initialized for Digital Inputs -> Conditions Drop Zone.");
+    // Add initialization for other lists/zones later
+    console.log("Drag and drop initialized for IO Variables -> Conditions Drop Zone."); // Update log slightly
 }
 
 // Function to populate and show the Create Condition modal
@@ -675,20 +706,121 @@ function handleDeleteConditionClick(event) {
     }
 }
 
+// --- NEW: Function to populate the Digital Input Edit Modal ---
+// (Moved logic from handleEditButtonClick here for clarity)
+function populateDiEditModal(ioVariable) {
+    const modal = document.getElementById('editIoVariableModal');
+    const typeStr = dataTypesMap[ioVariable.t]; // Should be "DigitalInput"
+    const num = ioVariable.n;
+
+    modal.querySelector('#editIoVariableModalLabel').textContent = `Edit ${typeStr} #${num}`;
+    modal.querySelector('#editIoType').value = typeStr;
+    modal.querySelector('#editIoNum').value = num;
+    modal.querySelector('#displayIoDiNum').textContent = num;
+    modal.querySelector('#editIoName').value = ioVariable.nm;
+    modal.querySelector('#editIoMode').value = ioVariable.m; // Set the mode dropdown
+    modal.querySelector('#editIoStatus').checked = ioVariable.s;
+
+    // TODO: Dynamically populate DI modes if they differ significantly in the future
+}
+
+// --- NEW: Function to populate the Digital Output Edit Modal ---
+function populateDoEditModal(ioVariable) {
+    const modal = document.getElementById('editDoVariableModal'); // Target the DO modal
+    const typeStr = dataTypesMap[ioVariable.t]; // Should be "DigitalOutput"
+    const num = ioVariable.n;
+
+    modal.querySelector('#editDoVariableModalLabel').textContent = `Edit ${typeStr} #${num}`; // Use DO label ID
+    modal.querySelector('#editDoType').value = typeStr; // Use DO hidden field ID
+    modal.querySelector('#editDoNum').value = num;      // Use DO hidden field ID
+    modal.querySelector('#displayDoNum').textContent = num; // Use DO display span ID
+    modal.querySelector('#editDoName').value = ioVariable.nm; // Use DO name input ID
+    modal.querySelector('#editDoStatus').checked = ioVariable.s; // Use DO status switch ID
+
+    // Populate DO modes (can be simpler if only a few)
+    const modeSelect = modal.querySelector('#editDoMode'); // Use DO mode select ID
+    modeSelect.innerHTML = ''; // Clear existing options
+
+    // Add relevant modes for Digital Outputs
+    const doModes = {
+        0: 'None', // Default/Volatile
+        4: 'Pulse' // Pulse mode
+        // Add other DO-specific modes here if defined in C++
+    };
+
+    for (const [value, text] of Object.entries(doModes)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        modeSelect.appendChild(option);
+    }
+    modeSelect.value = ioVariable.m; // Set the current selection
+}
+
+// --- Function to handle saving changes from the DO Variable modal ---
+function saveDoVariableChanges() {
+    const modal = document.getElementById('editDoVariableModal'); // Target DO modal
+
+    // Read identifiers
+    const typeStr = modal.querySelector('#editDoType').value; // Read from DO modal
+    const num = parseInt(modal.querySelector('#editDoNum').value, 10); // Read from DO modal
+
+    // Read new values
+    const newName = modal.querySelector('#editDoName').value; // Read from DO modal
+    const newMode = parseInt(modal.querySelector('#editDoMode').value, 10); // Read from DO modal
+    const newStatus = modal.querySelector('#editDoStatus').checked; // Read from DO modal
+
+    // Find the IOVariable object
+    const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === typeStr && io.n === num);
+
+    if (ioVariable) {
+        // Update the object in currentConfig
+        ioVariable.nm = newName;
+        ioVariable.m = newMode;
+        ioVariable.s = newStatus;
+
+        console.log(`Updated ${typeStr} #${num} in currentConfig:`, ioVariable);
+
+        // Close the modal
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            modalInstance.hide();
+        } else { // Fallback
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) backdrop.remove();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+
+        // Refresh the UI list
+        populateIoVariables(currentConfig.ioVariables);
+
+    } else {
+        console.error(`Could not find IOVariable to save: ${typeStr} #${num}`);
+        alert("Error: Could not save changes. IO Variable not found.");
+    }
+}
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig(); // Load config when the page is ready
-
     const saveButton = document.getElementById('saveConfigBtn');
     if (saveButton) {
         saveButton.addEventListener('click', saveConfig);
     }
-    const saveIoBtn = document.getElementById('saveIoChangesBtn');
+    const saveIoBtn = document.getElementById('saveIoChangesBtn'); // DI Save Button
     if (saveIoBtn) {
         saveIoBtn.addEventListener('click', saveIoVariableChanges);
     }
-    // --- Listener for the Condition Comparison dropdown ---
+    const saveDoBtn = document.getElementById('saveDoChangesBtn'); // DO Save Button
+    if (saveDoBtn) {
+        saveDoBtn.addEventListener('click', saveDoVariableChanges); // Call the new function
+    }
+
+    // --- ADD THESE LISTENERS BACK ---
+    // Listener for the Condition Comparison dropdown
     const conditionComparisonSelect = document.getElementById('conditionComparison');
     const conditionValueGroup = document.getElementById('conditionValueGroup');
 
@@ -706,13 +838,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Could not find condition modal comparison or value elements to attach listener.");
     }
 
-    // --- Listener for the Save Condition button in the modal ---
+    // Listener for the Save Condition button in the modal
     const saveConditionButton = document.getElementById('saveConditionBtn');
     if (saveConditionButton) {
-        saveConditionButton.addEventListener('click', saveCondition);
+        saveConditionButton.addEventListener('click', saveCondition); // Attach the saveCondition function
     } else {
         console.error("Could not find Save Condition button element.");
     }
-
+    // --- END OF ADDED LISTENERS ---
 
 });
+
