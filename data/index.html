@@ -60,10 +60,60 @@
                             </ul>
                         </div>
                     </div>
-                </div>
-            </div>
+                    <hr class="my-1">
+                    <div class="p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">Analog Inputs</h6>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseAnalogInputs" aria-expanded="true"
+                                aria-controls="collapseAnalogInputs">
+                                <span class="collapse-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="collapseAnalogInputs">
+                            <ul class="list-group list-group-flush small" id="analog-inputs-list">
+                                <li class="list-group-item text-muted py-1">Loading inputs...</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Existing Analog Inputs section ends here -->
 
-            <!-- Placeholder for Condition/Action Column -->
+                    <hr class="my-1"> <!-- Add a separator -->
+                    <div class="p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">Soft IO</h6>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseSoftIo" aria-expanded="true"
+                                aria-controls="collapseSoftIo">
+                                <span class="collapse-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="collapseSoftIo">
+                            <ul class="list-group list-group-flush small" id="softio-list">
+                                <li class="list-group-item text-muted py-1">Loading SoftIO...</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr class="my-1"> <!-- Add a separator -->
+                    <div class="p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">Timers</h6>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseTimers" aria-expanded="true"
+                                aria-controls="collapseTimers">
+                                <span class="collapse-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="collapseTimers">
+                            <ul class="list-group list-group-flush small" id="timers-list">
+                                <li class="list-group-item text-muted py-1">Loading Timers...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div> <!-- This closes the IO Variables card-body or similar container -->
+            </div> <!-- This closes the IO Variables col-md-3 -->
+
             <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-header">
@@ -71,20 +121,15 @@
                     </div>
                     <div class="card-body">
                         <ul id="conditions-list" class="list-group list-group-flush small mb-3">
-                            <!-- Dynamically added conditions will go here -->
                         </ul>
-                        <!-- Condition Creation Area -->
                         <h6 class="mb-2 small">Create Condition</h6>
                         <div id="conditions-drop-zone" class="border p-3 mb-3 text-muted text-center"
                             style="min-height: 80px; background-color: #fdf6ff;">
                             Drop IO Variable here to start creating a Condition...
                         </div>
-
-                        <hr> <!-- Separator -->
+                        <hr>
                         <ul id="actions-list" class="list-group list-group-flush small mt-3">
-                            <!-- Dynamically added actions will go here -->
                         </ul>
-                        <!-- Action Creation Area (Placeholder for now) -->
                         <h6 class="mb-2 small">Create Action</h6>
                         <div id="actions-placeholder" class="border p-3 text-muted text-center"
                             style="min-height: 80px; background-color: #f8f9fa;">
@@ -271,6 +316,165 @@
             </div>
         </div>
     </div>
+
+    <!-- Add this Modal structure for Editing Analog Inputs -->
+    <div class="modal fade" id="editAiVariableModal" tabindex="-1" aria-labelledby="editAiVariableModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAiVariableModalLabel">Edit Analog Input</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-ai-form">
+                        <!-- Hidden fields to store identifier -->
+                        <input type="hidden" id="editAiType">
+                        <input type="hidden" id="editAiNum">
+
+                        <!-- Row for Input Number and Switch -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div> <!-- Left side: Label and Number -->
+                                <label class=" mb-0 me-2">Input Number:</label>
+                                <span id="displayAiNum" class="fw-bold"></span> <!-- JS will populate this -->
+                            </div>
+                            <div> <!-- Right side: Switch -->
+                                <div class="form-check form-switch form-switch-lg">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="editAiStatus">
+                                    <label class="form-check-label" for="editAiStatus">Enable</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editAiName" class="form-label">Name:</label>
+                            <input type="text" class="form-control" id="editAiName" required maxlength="29">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAiMode" class="form-label">Operation Mode:</label>
+                            <select class="form-select" id="editAiMode">
+                                <!-- Options will be populated by script.js -->
+                                <option value="0">None (Raw ADC)</option> <!-- Default/Raw -->
+                                <option value="8">Scaled (0-100%)</option> <!-- Scaled mode -->
+                                <!-- Add other AI modes here if needed -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveAiChangesBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End of Analog Input Edit Modal -->
+
+    <!-- START: Add SoftIO Edit Modal -->
+    <div class="modal fade" id="editSoftIoVariableModal" tabindex="-1" aria-labelledby="editSoftIoVariableModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSoftIoVariableModalLabel">Edit Soft IO</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-softio-form">
+                        <!-- Hidden fields -->
+                        <input type="hidden" id="editSoftIoType">
+                        <input type="hidden" id="editSoftIoNum">
+
+                        <!-- Row for Number and Switch -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <label class=" mb-0 me-2">SoftIO Number:</label>
+                                <span id="displaySoftIoNum" class="fw-bold"></span>
+                            </div>
+                            <div>
+                                <div class="form-check form-switch form-switch-lg">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="editSoftIoStatus">
+                                    <label class="form-check-label" for="editSoftIoStatus">Enable</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editSoftIoName" class="form-label">Name:</label>
+                            <input type="text" class="form-control" id="editSoftIoName" required maxlength="29">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSoftIoMode" class="form-label">Operation Mode:</label>
+                            <select class="form-select" id="editSoftIoMode">
+                                <!-- Options populated by script.js -->
+                                <option value="0">None (Volatile)</option> <!-- Default -->
+                                <option value="9">Persistent</option> <!-- Persistent mode -->
+                            </select>
+                        </div>
+                        <!-- SoftIO doesn't typically have a user-settable preset value in this modal -->
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSoftIoChangesBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: Add SoftIO Edit Modal -->
+
+    <!-- START: Add Timer Edit Modal -->
+    <div class="modal fade" id="editTimerVariableModal" tabindex="-1" aria-labelledby="editTimerVariableModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editTimerVariableModalLabel">Edit Timer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-timer-form">
+                        <!-- Hidden fields -->
+                        <input type="hidden" id="editTimerType">
+                        <input type="hidden" id="editTimerNum">
+
+                        <!-- Row for Number and Switch -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <label class=" mb-0 me-2">Timer Number:</label>
+                                <span id="displayTimerNum" class="fw-bold"></span>
+                            </div>
+                            <div>
+                                <div class="form-check form-switch form-switch-lg">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="editTimerStatus">
+                                    <label class="form-check-label" for="editTimerStatus">Enable</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editTimerName" class="form-label">Name:</label>
+                            <input type="text" class="form-control" id="editTimerName" required maxlength="29">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTimerMode" class="form-label">Operation Mode:</label>
+                            <select class="form-select" id="editTimerMode">
+                                <!-- Options populated by script.js -->
+                                <option value="5">One Shot</option> <!-- Default -->
+                                <option value="6">Repeating</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveTimerChangesBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing Create Condition Modal follows -->
 
     <!-- Add this Modal structure for Creating/Editing Conditions -->
     <div class="modal fade" id="createConditionModal" tabindex="-1" aria-labelledby="createConditionModalLabel"

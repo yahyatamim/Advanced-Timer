@@ -127,9 +127,12 @@ function populateDeviceSettingsForm(settings) {
 function populateIoVariables(ioVariables) {
     const diList = document.getElementById('digital-inputs-list');
     const doList = document.getElementById('digital-outputs-list');
+    const aiList = document.getElementById('analog-inputs-list');
+    const softioList = document.getElementById('softio-list');
+    const timersList = document.getElementById('timers-list');
     // Add other list elements later (doList, aiList, etc.)
 
-    if (!diList || !doList) {
+    if (!diList || !doList || !aiList) {
         console.error("Required IO list element(s) not found!");
         return; // Exit if the list element doesn't exist
     }
@@ -137,6 +140,9 @@ function populateIoVariables(ioVariables) {
     // Clear existing items before adding new ones
     diList.innerHTML = '';
     doList.innerHTML = '';
+    aiList.innerHTML = '';
+    softioList.innerHTML = '';
+    timersList.innerHTML = '';
     // Clear other lists later (e.g., doList.innerHTML = '';)
 
     if (!ioVariables || !Array.isArray(ioVariables)) {
@@ -245,9 +251,125 @@ function populateIoVariables(ioVariables) {
             `;
             doList.appendChild(listItem); // <-- Append to doList
         }
-        // Add 'else if' blocks here later for other IO types (AnalogInput, etc.)
-        // else if (io.t === 2) { /* Handle Analog Inputs */ }
+        else if (io.t === 2) { // 2 corresponds to AnalogInput
+            const listItem = document.createElement('li');
+            // Apply same classes, including 'inactive' based on status 's'
+            listItem.className = `list-group-item py-2 px-2 d-flex justify-content-between align-items-center io-variable-item ${!io.s ? 'inactive' : ''}`;
+            listItem.dataset.type = dataTypesMap[io.t]; // Stores "AnalogInput"
+            listItem.dataset.num = io.n;
 
+            // --- Calculate display values (similar to DI/DO) ---
+            const modeShort = operationModeShortMap[io.m] || '?'; // Relevant modes: 0 (None), 8 (Scaled)
+            const modeTitle = operationModeMap[io.m] || 'Unknown Mode';
+            // Analog inputs don't have a typical boolean state, but we display 'st' for consistency
+            const stateText = io.st ? 'On' : 'Off';
+            const stateBg = io.st ? 'bg-success' : 'bg-danger';
+            const stateTitle = io.st ? 'True' : 'False'; // Less meaningful for AI, but consistent
+            // Value is the key indicator for AI
+            const valueText = io.v;
+            const valueBg = 'bg-info text-dark'; // Use info bg for value
+            const valueTitle = `Raw Value: ${io.v}`; // Title shows raw value
+            // Flags can still be useful
+            const flagText = io.f ? 'Fl' : 'Cl';
+            const flagBg = io.f ? 'bg-warning text-dark' : 'bg-light text-dark';
+            const flagTitle = io.f ? 'True' : 'False';
+
+            // --- Construct inner HTML (matches DI/DO structure) ---
+            listItem.innerHTML = `
+                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <div class="flex-grow-1 me-2">
+                    <div class="io-name small ">${io.nm || `Analog In ${io.n}`}</div>
+                    <div class="io-indicators">
+                        <span class="badge ${stateBg}" title="State: ${stateTitle}">${stateText}</span>
+                        <span class="badge ${valueBg}" title="${valueTitle}">${valueText}</span>
+                        <span class="badge ${flagBg}" title="Flag: ${flagTitle}">${flagText}</span>
+                        <span class="badge bg-secondary" title="Mode: ${modeTitle}">${modeShort}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary edit-io-btn fs-6 p-1" title="Edit"
+                        data-bs-toggle="modal" data-bs-target="#editAiVariableModal"
+                        data-type="${dataTypesMap[io.t]}" data-num="${io.n}">
+                    ⚙️
+                </button>
+            `;
+
+            // Append to the Analog Inputs list
+            aiList.appendChild(listItem); // <-- Append to aiList
+        }
+        else if (io.t === 3) { // 3 corresponds to SoftIO
+            const listItem = document.createElement('li');
+            listItem.className = `list-group-item py-2 px-2 d-flex justify-content-between align-items-center io-variable-item ${!io.s ? 'inactive' : ''}`;
+            listItem.dataset.type = dataTypesMap[io.t]; // Stores "SoftIO"
+            listItem.dataset.num = io.n;
+
+            const modeShort = operationModeShortMap[io.m] || '?'; // None/Pers
+            const modeTitle = operationModeMap[io.m] || 'Unknown Mode';
+            const stateText = io.st ? 'On' : 'Off'; // SoftIO has a boolean state
+            const stateBg = io.st ? 'bg-success' : 'bg-danger';
+            const stateTitle = io.st ? 'True' : 'False';
+            const valueText = io.v; // SoftIO has a numerical value
+            const valueBg = 'bg-info text-dark';
+            const valueTitle = `Value: ${io.v}`;
+            const flagText = io.f ? 'Fl' : 'Cl'; // SoftIO can have a flag
+            const flagBg = io.f ? 'bg-warning text-dark' : 'bg-light text-dark';
+            const flagTitle = io.f ? 'True' : 'False';
+
+            listItem.innerHTML = `
+                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <div class="flex-grow-1 me-2">
+                    <div class="io-name small ">${io.nm || `Soft IO ${io.n}`}</div>
+                    <div class="io-indicators">
+                        <span class="badge ${stateBg}" title="State: ${stateTitle}">${stateText}</span>
+                        <span class="badge ${valueBg}" title="${valueTitle}">${valueText}</span>
+                        <span class="badge ${flagBg}" title="Flag: ${flagTitle}">${flagText}</span>
+                        <span class="badge bg-secondary" title="Mode: ${modeTitle}">${modeShort}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary edit-io-btn fs-6 p-1" title="Edit"
+                        data-bs-toggle="modal" data-bs-target="#editSoftIoVariableModal"
+                        data-type="${dataTypesMap[io.t]}" data-num="${io.n}">
+                    ⚙️
+                </button>
+            `;
+            softioList.appendChild(listItem); // <-- Append to softioList
+        }
+        else if (io.t === 4) { // 4 corresponds to Timer
+            const listItem = document.createElement('li');
+            listItem.className = `list-group-item py-2 px-2 d-flex justify-content-between align-items-center io-variable-item ${!io.s ? 'inactive' : ''}`;
+            listItem.dataset.type = dataTypesMap[io.t]; // Stores "Timer"
+            listItem.dataset.num = io.n;
+
+            const modeShort = operationModeShortMap[io.m] || '?'; // Once/Rept
+            const modeTitle = operationModeMap[io.m] || 'Unknown Mode';
+            const stateText = io.st ? 'Run' : 'Stop'; // Timer state: Running or Stopped
+            const stateBg = io.st ? 'bg-success' : 'bg-secondary'; // Green for running, grey for stopped
+            const stateTitle = io.st ? 'Running' : 'Stopped';
+            const valueText = io.v; // Timer value (current count?)
+            const valueBg = 'bg-info text-dark';
+            const valueTitle = `Current Value: ${io.v}`; // Indicate it's the current count
+            const flagText = io.f ? 'Exp' : 'Rst'; // Timer flag: Expired or Reset/Not Expired
+            const flagBg = io.f ? 'bg-warning text-dark' : 'bg-light text-dark'; // Yellow for expired
+            const flagTitle = io.f ? 'Expired' : 'Reset/Not Expired';
+
+            listItem.innerHTML = `
+                <span class="io-number fs-5 fw-bold me-2">${io.n}</span>
+                <div class="flex-grow-1 me-2">
+                    <div class="io-name small ">${io.nm || `Timer ${io.n}`}</div>
+                    <div class="io-indicators">
+                        <span class="badge ${stateBg}" title="State: ${stateTitle}">${stateText}</span>
+                        <span class="badge ${valueBg}" title="${valueTitle}">${valueText}</span>
+                        <span class="badge ${flagBg}" title="Flag: ${flagTitle}">${flagText}</span>
+                        <span class="badge bg-secondary" title="Mode: ${modeTitle}">${modeShort}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary edit-io-btn fs-6 p-1" title="Edit"
+                        data-bs-toggle="modal" data-bs-target="#editTimerVariableModal"
+                        data-type="${dataTypesMap[io.t]}" data-num="${io.n}">
+                    ⚙️
+                </button>
+            `;
+            timersList.appendChild(listItem); // <-- Append to timersList
+        }
     });
 
     // After populating, attach event listeners to the new edit buttons
@@ -281,6 +403,12 @@ function handleEditButtonClick(event) {
             populateDiEditModal(ioVariable); // Use a dedicated function
         } else if (typeStr === 'DigitalOutput') {
             populateDoEditModal(ioVariable); // Use a dedicated function
+        } else if (typeStr === 'AnalogInput') {
+            populateAiEditModal(ioVariable); // Call the new function for AI
+        } else if (typeStr === 'SoftIO') {
+            populateSoftIoEditModal(ioVariable); // Call SoftIO function
+        } else if (typeStr === 'Timer') {
+            populateTimerEditModal(ioVariable); // Call Timer function
         } else {
             console.warn(`Edit button clicked for unhandled IO type: ${typeStr}`);
             alert(`Editing for ${typeStr} is not yet implemented.`);
@@ -435,11 +563,14 @@ async function saveConfig() {
 // Function to initialize drag-and-drop functionality
 function initializeDragAndDrop() {
     const diList = document.getElementById('digital-inputs-list');
-    const doList = document.getElementById('digital-outputs-list'); // <-- GET DO LIST
+    const doList = document.getElementById('digital-outputs-list');
+    const aiList = document.getElementById('analog-inputs-list');
+    const softioList = document.getElementById('softio-list');
+    const timersList = document.getElementById('timers-list');
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
     // Get other lists/zones later as needed
 
-    if (!diList || !doList || !conditionsDropZone) { // <-- UPDATE CHECK
+    if (!diList || !doList || !aiList || !softioList || !timersList || !conditionsDropZone) { // <-- UPDATE CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -459,6 +590,34 @@ function initializeDragAndDrop() {
     new Sortable(doList, {
         group: {
             name: 'io-logic', // Same group name allows dragging DOs too
+            pull: 'clone',
+            put: false
+        },
+        animation: 150,
+        sort: false
+    });
+
+    new Sortable(aiList, {
+        group: {
+            name: 'io-logic', // Same group name allows dragging AIs too
+            pull: 'clone',
+            put: false
+        },
+        animation: 150,
+        sort: false
+    });
+    new Sortable(softioList, {
+        group: {
+            name: 'io-logic', // Same group name
+            pull: 'clone',
+            put: false
+        },
+        animation: 150,
+        sort: false
+    });
+    new Sortable(timersList, {
+        group: {
+            name: 'io-logic', // Same group name
             pull: 'clone',
             put: false
         },
@@ -757,6 +916,71 @@ function populateDoEditModal(ioVariable) {
     modeSelect.value = ioVariable.m; // Set the current selection
 }
 
+// --- NEW: Function to populate the Analog Input Edit Modal ---
+function populateAiEditModal(ioVariable) {
+    const modal = document.getElementById('editAiVariableModal'); // Target the AI modal
+    const typeStr = dataTypesMap[ioVariable.t]; // Should be "AnalogInput"
+    const num = ioVariable.n;
+
+    modal.querySelector('#editAiVariableModalLabel').textContent = `Edit ${typeStr} #${num}`; // Use AI label ID
+    modal.querySelector('#editAiType').value = typeStr; // Use AI hidden field ID
+    modal.querySelector('#editAiNum').value = num;      // Use AI hidden field ID
+    modal.querySelector('#displayAiNum').textContent = num; // Use AI display span ID
+    modal.querySelector('#editAiName').value = ioVariable.nm; // Use AI name input ID
+    modal.querySelector('#editAiStatus').checked = ioVariable.s; // Use AI status switch ID
+
+    // Populate AI modes
+    const modeSelect = modal.querySelector('#editAiMode'); // Use AI mode select ID
+    modeSelect.innerHTML = ''; // Clear existing options
+
+    // Add relevant modes for Analog Inputs (from operationModeMap/enum)
+    const aiModes = {
+        0: operationModeMap[0], // 'None (Raw ADC)'
+        8: operationModeMap[8]  // 'Scaled (0-100%)'
+        // Add other AI-specific modes here if defined in C++
+    };
+
+    for (const [value, text] of Object.entries(aiModes)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        modeSelect.appendChild(option);
+    }
+    modeSelect.value = ioVariable.m; // Set the current selection
+}
+
+// --- NEW: Function to populate the SoftIO Edit Modal ---
+function populateSoftIoEditModal(ioVariable) {
+    const modal = document.getElementById('editSoftIoVariableModal');
+    const typeStr = dataTypesMap[ioVariable.t]; // "SoftIO"
+    const num = ioVariable.n;
+
+    modal.querySelector('#editSoftIoVariableModalLabel').textContent = `Edit ${typeStr} #${num}`;
+    modal.querySelector('#editSoftIoType').value = typeStr;
+    modal.querySelector('#editSoftIoNum').value = num;
+    modal.querySelector('#displaySoftIoNum').textContent = num;
+    modal.querySelector('#editSoftIoName').value = ioVariable.nm;
+    modal.querySelector('#editSoftIoStatus').checked = ioVariable.s;
+
+    // Populate SoftIO modes
+    const modeSelect = modal.querySelector('#editSoftIoMode');
+    modeSelect.innerHTML = ''; // Clear existing options
+
+    const softIoModes = {
+        0: operationModeMap[0], // 'None (Volatile)'
+        9: operationModeMap[9]  // 'Persistent'
+    };
+
+    for (const [value, text] of Object.entries(softIoModes)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        modeSelect.appendChild(option);
+    }
+    modeSelect.value = ioVariable.m; // Set current selection
+}
+
+
 // --- Function to handle saving changes from the DO Variable modal ---
 function saveDoVariableChanges() {
     const modal = document.getElementById('editDoVariableModal'); // Target DO modal
@@ -803,6 +1027,166 @@ function saveDoVariableChanges() {
     }
 }
 
+// --- NEW: Function to handle saving changes from the AI Variable modal ---
+function saveAiVariableChanges() {
+    const modal = document.getElementById('editAiVariableModal'); // Target AI modal
+
+    // Read identifiers
+    const typeStr = modal.querySelector('#editAiType').value; // Read from AI modal
+    const num = parseInt(modal.querySelector('#editAiNum').value, 10); // Read from AI modal
+
+    // Read new values
+    const newName = modal.querySelector('#editAiName').value; // Read from AI modal
+    const newMode = parseInt(modal.querySelector('#editAiMode').value, 10); // Read from AI modal
+    const newStatus = modal.querySelector('#editAiStatus').checked; // Read from AI modal
+
+    // Find the IOVariable object
+    const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === typeStr && io.n === num);
+
+    if (ioVariable) {
+        // Update the object in currentConfig
+        ioVariable.nm = newName;
+        ioVariable.m = newMode;
+        ioVariable.s = newStatus;
+
+        console.log(`Updated ${typeStr} #${num} in currentConfig:`, ioVariable);
+
+        // Close the modal
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            modalInstance.hide();
+        } else { // Fallback
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) backdrop.remove();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+
+        // Refresh the UI list
+        populateIoVariables(currentConfig.ioVariables);
+
+    } else {
+        console.error(`Could not find IOVariable to save: ${typeStr} #${num}`);
+        alert("Error: Could not save changes. IO Variable not found.");
+    }
+}
+
+// --- NEW: Function to populate the Timer Edit Modal ---
+function populateTimerEditModal(ioVariable) {
+    const modal = document.getElementById('editTimerVariableModal');
+    const typeStr = dataTypesMap[ioVariable.t]; // "Timer"
+    const num = ioVariable.n;
+
+    modal.querySelector('#editTimerVariableModalLabel').textContent = `Edit ${typeStr} #${num}`;
+    modal.querySelector('#editTimerType').value = typeStr;
+    modal.querySelector('#editTimerNum').value = num;
+    modal.querySelector('#displayTimerNum').textContent = num;
+    modal.querySelector('#editTimerName').value = ioVariable.nm;
+    modal.querySelector('#editTimerStatus').checked = ioVariable.s;
+
+    // Populate Timer modes
+    const modeSelect = modal.querySelector('#editTimerMode');
+    modeSelect.innerHTML = ''; // Clear existing options
+
+    const timerModes = {
+        5: operationModeMap[5], // 'One Shot'
+        6: operationModeMap[6]  // 'Repeating'
+    };
+
+    for (const [value, text] of Object.entries(timerModes)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        modeSelect.appendChild(option);
+    }
+    modeSelect.value = ioVariable.m; // Set current selection
+
+    // NOTE: We are NOT populating the preset value field here, as it was removed from HTML.
+}
+
+// --- NEW: Function to handle saving changes from the SoftIO Variable modal ---
+function saveSoftIoVariableChanges() {
+    const modal = document.getElementById('editSoftIoVariableModal');
+
+    // Read identifiers
+    const typeStr = modal.querySelector('#editSoftIoType').value;
+    const num = parseInt(modal.querySelector('#editSoftIoNum').value, 10);
+
+    // Read new values
+    const newName = modal.querySelector('#editSoftIoName').value;
+    const newMode = parseInt(modal.querySelector('#editSoftIoMode').value, 10);
+    const newStatus = modal.querySelector('#editSoftIoStatus').checked;
+
+    // Find the IOVariable object
+    const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === typeStr && io.n === num);
+
+    if (ioVariable) {
+        // Update the object in currentConfig
+        ioVariable.nm = newName;
+        ioVariable.m = newMode;
+        ioVariable.s = newStatus;
+        // Note: SoftIO 'value' and 'state' are runtime, not set here. 'flag' might be set by actions.
+
+        console.log(`Updated ${typeStr} #${num} in currentConfig:`, ioVariable);
+
+        // Close the modal
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) modalInstance.hide();
+        else { /* Fallback code */ } // Keep fallback for safety
+
+        // Refresh the UI list
+        populateIoVariables(currentConfig.ioVariables);
+
+    } else {
+        console.error(`Could not find IOVariable to save: ${typeStr} #${num}`);
+        alert("Error: Could not save changes. IO Variable not found.");
+    }
+}
+
+// --- NEW: Function to handle saving changes from the Timer Variable modal ---
+function saveTimerVariableChanges() {
+    const modal = document.getElementById('editTimerVariableModal');
+
+    // Read identifiers
+    const typeStr = modal.querySelector('#editTimerType').value;
+    const num = parseInt(modal.querySelector('#editTimerNum').value, 10);
+
+    // Read new values
+    const newName = modal.querySelector('#editTimerName').value;
+    const newMode = parseInt(modal.querySelector('#editTimerMode').value, 10);
+    const newStatus = modal.querySelector('#editTimerStatus').checked;
+    // NOTE: We are NOT reading the preset value here.
+
+    // Find the IOVariable object
+    const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === typeStr && io.n === num);
+
+    if (ioVariable) {
+        // Update the object in currentConfig
+        ioVariable.nm = newName;
+        ioVariable.m = newMode;
+        ioVariable.s = newStatus;
+        // Note: Timer 'value' (current count), 'state' (running), and 'flag' (expired) are runtime.
+        // The preset value will be set via an Action later.
+
+        console.log(`Updated ${typeStr} #${num} in currentConfig:`, ioVariable);
+
+        // Close the modal
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) modalInstance.hide();
+        else { /* Fallback code */ } // Keep fallback
+
+        // Refresh the UI list
+        populateIoVariables(currentConfig.ioVariables);
+
+    } else {
+        console.error(`Could not find IOVariable to save: ${typeStr} #${num}`);
+        alert("Error: Could not save changes. IO Variable not found.");
+    }
+}
+
+
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig(); // Load config when the page is ready
@@ -817,6 +1201,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveDoBtn = document.getElementById('saveDoChangesBtn'); // DO Save Button
     if (saveDoBtn) {
         saveDoBtn.addEventListener('click', saveDoVariableChanges); // Call the new function
+    }
+    const saveAiBtn = document.getElementById('saveAiChangesBtn'); // AI Save Button
+    if (saveAiBtn) {
+        saveAiBtn.addEventListener('click', saveAiVariableChanges); // Call the new AI save function
+    }
+    const saveSoftIoBtn = document.getElementById('saveSoftIoChangesBtn'); // SoftIO Save Button
+    if (saveSoftIoBtn) {
+        saveSoftIoBtn.addEventListener('click', saveSoftIoVariableChanges); // Call SoftIO save function
+    }
+    const saveTimerBtn = document.getElementById('saveTimerChangesBtn'); // Timer Save Button
+    if (saveTimerBtn) {
+        saveTimerBtn.addEventListener('click', saveTimerVariableChanges); // Call Timer save function
     }
 
     // --- ADD THESE LISTENERS BACK ---

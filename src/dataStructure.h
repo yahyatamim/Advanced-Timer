@@ -8,8 +8,8 @@
 #define MAX_DIGITAL_IN 6
 #define MAX_DIGITAL_OUT 4
 #define MAX_ANALOG_IN 4
-#define MAX_SOFTIO 20
-#define MAX_TIMERS 10
+#define MAX_SOFTIO 5
+#define MAX_TIMERS 5
 #define MAX_CONDITIONS 50
 #define MAX_CONDITION_GROUPS 20
 #define MAX_ACTIONS 50
