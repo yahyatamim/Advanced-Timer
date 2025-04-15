@@ -90,7 +90,7 @@ footer {
     margin-left: 3px;
     font-size: 0.7em;
     /* Smaller badges */
-    padding: 0.2em 0.4em;
+    /* padding: 0.2em 0.4em; */
 }
 
 .edit-io-btn {
@@ -200,4 +200,43 @@ footer {
     /* Ensure this exists */
     background-color: #6f42c1;
     color: #fff;
+}
+
+/* --- Larger Toggle Switch Styling --- */
+.form-switch-lg {
+    padding-left: 3.5rem;
+    /* Increased padding to accommodate larger switch */
+    min-height: 2rem;
+    /* Increased height */
+}
+
+.form-switch-lg .form-check-input {
+    width: 3rem;
+    /* Increased width */
+    height: 1.5rem;
+    /* Increased height */
+    margin-left: -3.5rem;
+    /* Adjust negative margin to match padding */
+    /* Adjust background image position if using Bootstrap's default SVG */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
+    background-position: left center;
+    /* Keep circle left initially */
+    background-size: contain;
+    /* Ensure the circle fits */
+    transition: background-position .15s ease-in-out;
+    /* Keep transition */
+}
+
+.form-switch-lg .form-check-input:checked {
+    background-position: right center;
+    /* Move circle right when checked */
+    /* Ensure checked background color and image are applied */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+}
+
+.form-switch-lg .form-check-label {
+    padding-top: 0.25rem;
+    /* Adjust label alignment if needed */
+    font-size: 1rem;
+    /* Ensure label size is appropriate */
 }
