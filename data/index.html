@@ -30,106 +30,129 @@
                     <div class="card-header">
                         <h5 class="mb-0">IO Variables</h5>
                     </div>
-                    <div class="p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 small">Digital Inputs</h6>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#collapseDigitalInputs" aria-expanded="true"
-                                aria-controls="collapseDigitalInputs">
-                                <span class="collapse-icon">▼</span>
-                            </button>
+                    <div class="scrollable-column-content">
+                        <div class="p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 small">Digital Inputs</h6>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseDigitalInputs"
+                                    aria-expanded="true" aria-controls="collapseDigitalInputs">
+                                    <span class="collapse-icon">▼</span>
+                                </button>
+                            </div>
+                            <div class="collapse show" id="collapseDigitalInputs">
+                                <ul class="list-group list-group-flush small" id="digital-inputs-list">
+                                </ul>
+                            </div>
                         </div>
-                        <div class="collapse show" id="collapseDigitalInputs">
-                            <ul class="list-group list-group-flush small" id="digital-inputs-list">
-                            </ul>
+                        <hr class="my-1">
+                        <div class="p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 small">Digital Outputs</h6>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseDigitalOutputs"
+                                    aria-expanded="true" aria-controls="collapseDigitalOutputs">
+                                    <span class="collapse-icon">▼</span>
+                                </button>
+                            </div>
+                            <div class="collapse show" id="collapseDigitalOutputs">
+                                <ul class="list-group list-group-flush small" id="digital-outputs-list">
+                                    <li class="list-group-item text-muted py-1">Loading outputs...</li>
+                                </ul>
+                            </div>
                         </div>
-                    </div>
-                    <hr class="my-1">
-                    <div class="p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 small">Digital Outputs</h6>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#collapseDigitalOutputs" aria-expanded="true"
-                                aria-controls="collapseDigitalOutputs">
-                                <span class="collapse-icon">▼</span>
-                            </button>
+                        <hr class="my-1">
+                        <div class="p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 small">Analog Inputs</h6>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseAnalogInputs"
+                                    aria-expanded="true" aria-controls="collapseAnalogInputs">
+                                    <span class="collapse-icon">▼</span>
+                                </button>
+                            </div>
+                            <div class="collapse show" id="collapseAnalogInputs">
+                                <ul class="list-group list-group-flush small" id="analog-inputs-list">
+                                    <li class="list-group-item text-muted py-1">Loading inputs...</li>
+                                </ul>
+                            </div>
                         </div>
-                        <div class="collapse show" id="collapseDigitalOutputs">
-                            <ul class="list-group list-group-flush small" id="digital-outputs-list">
-                                <li class="list-group-item text-muted py-1">Loading outputs...</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <hr class="my-1">
-                    <div class="p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 small">Analog Inputs</h6>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#collapseAnalogInputs" aria-expanded="true"
-                                aria-controls="collapseAnalogInputs">
-                                <span class="collapse-icon">▼</span>
-                            </button>
-                        </div>
-                        <div class="collapse show" id="collapseAnalogInputs">
-                            <ul class="list-group list-group-flush small" id="analog-inputs-list">
-                                <li class="list-group-item text-muted py-1">Loading inputs...</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <!-- Existing Analog Inputs section ends here -->
+                        <!-- Existing Analog Inputs section ends here -->
 
-                    <hr class="my-1"> <!-- Add a separator -->
-                    <div class="p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 small">Soft IO</h6>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#collapseSoftIo" aria-expanded="true"
-                                aria-controls="collapseSoftIo">
-                                <span class="collapse-icon">▼</span>
-                            </button>
+                        <hr class="my-1"> <!-- Add a separator -->
+                        <div class="p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 small">Soft IO</h6>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseSoftIo" aria-expanded="true"
+                                    aria-controls="collapseSoftIo">
+                                    <span class="collapse-icon">▼</span>
+                                </button>
+                            </div>
+                            <div class="collapse show" id="collapseSoftIo">
+                                <ul class="list-group list-group-flush small" id="softio-list">
+                                    <li class="list-group-item text-muted py-1">Loading SoftIO...</li>
+                                </ul>
+                            </div>
                         </div>
-                        <div class="collapse show" id="collapseSoftIo">
-                            <ul class="list-group list-group-flush small" id="softio-list">
-                                <li class="list-group-item text-muted py-1">Loading SoftIO...</li>
-                            </ul>
-                        </div>
-                    </div>
 
-                    <hr class="my-1"> <!-- Add a separator -->
-                    <div class="p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 small">Timers</h6>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#collapseTimers" aria-expanded="true"
-                                aria-controls="collapseTimers">
-                                <span class="collapse-icon">▼</span>
-                            </button>
-                        </div>
-                        <div class="collapse show" id="collapseTimers">
-                            <ul class="list-group list-group-flush small" id="timers-list">
-                                <li class="list-group-item text-muted py-1">Loading Timers...</li>
-                            </ul>
+                        <hr class="my-1"> <!-- Add a separator -->
+                        <div class="p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 small">Timers</h6>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseTimers" aria-expanded="true"
+                                    aria-controls="collapseTimers">
+                                    <span class="collapse-icon">▼</span>
+                                </button>
+                            </div>
+                            <div class="collapse show" id="collapseTimers">
+                                <ul class="list-group list-group-flush small" id="timers-list">
+                                    <li class="list-group-item text-muted py-1">Loading Timers...</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div> <!-- This closes the IO Variables card-body or similar container -->
             </div> <!-- This closes the IO Variables col-md-3 -->
 
+            <!-- Condition/Action Column -->
             <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-header">
                         <h5 class="mb-0">Condition/Action</h5>
                     </div>
-                    <div class="card-body">
-                        <ul id="conditions-list" class="list-group list-group-flush small mb-3">
-                        </ul>
+                    <div class="card-body scrollable-column-content">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">Conditions</h6>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseConditionsList" aria-expanded="true"
+                                aria-controls="collapseConditionsList">
+                                <span class="collapse-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="collapseConditionsList">
+                            <ul id="conditions-list" class="list-group list-group-flush small mb-3">
+                            </ul>
+                        </div>
                         <h6 class="mb-2 small">Create Condition</h6>
                         <div id="conditions-drop-zone" class="border p-3 mb-3 text-muted text-center"
                             style="min-height: 80px; background-color: #fdf6ff;">
                             Drop IO Variable here to start creating a Condition...
                         </div>
                         <hr>
-                        <ul id="actions-list" class="list-group list-group-flush small mt-3">
-                        </ul>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">Actions</h6>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseActionsList" aria-expanded="true"
+                                aria-controls="collapseActionsList">
+                                <span class="collapse-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="collapseActionsList">
+                            <ul id="actions-list" class="list-group list-group-flush small mt-3">
+                            </ul>
+                        </div>
                         <h6 class="mb-2 small">Create Action</h6>
                         <div id="actions-placeholder" class="border p-3 text-muted text-center"
                             style="min-height: 80px; background-color: #f8f9fa;">
@@ -144,7 +167,7 @@
                     <div class="card-header">
                         <h5 class="mb-0">Group</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body scrollable-column-content">
                         <p class="text-muted">Drag Conditions/Actions here...</p>
                         <!-- Add drop zones later -->
                     </div>
@@ -156,7 +179,7 @@
                     <div class="card-header">
                         <h5 class="mb-0">Rules</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body scrollable-column-content">
                         <p class="text-muted">Drag Groups here...</p>
                         <!-- Add drop zones later -->
                     </div>

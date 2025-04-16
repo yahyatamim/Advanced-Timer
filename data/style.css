@@ -146,6 +146,7 @@ footer {
     flex-shrink: 0;
     /* Prevent number from shrinking */
 }
+
 .io-number {
     color: #6c757d;
     /* Grey color for the number */
@@ -251,4 +252,36 @@ footer {
 .edit-condition-btn {
     border: none;
     /* Override the default outline border */
+}
+
+/* --- Column Content Scrolling --- */
+.scrollable-column-content {
+    max-height: 85vh;
+    /* Sets maximum height to 60% of the viewport height. Adjust as needed! */
+    overflow-y: auto;
+    /* Adds a vertical scrollbar ONLY if content exceeds max-height */
+    overflow-x: hidden;
+    /* Prevents horizontal scrollbars */
+    /* Optional: Add some padding if the content feels too close to the edges */
+    /* padding-bottom: 10px; */
+}
+
+/* Ensure card headers stay put (usually handled by Bootstrap structure) */
+.card .card-header {
+    flex-shrink: 0;
+    /* Prevents header from shrinking */
+}
+
+/* Make the card itself flexible to allow content scrolling */
+.card.h-100 {
+    display: flex;
+    flex-direction: column;
+}
+
+.card.h-100>.card-body,
+.card.h-100>.scrollable-column-content {
+    flex-grow: 1;
+    /* Allows this area to take up available space */
+    min-height: 0;
+    /* Important for flexbox scrolling */
 }
