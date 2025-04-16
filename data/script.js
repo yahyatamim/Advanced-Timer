@@ -8,7 +8,6 @@ let ioVariableSortable = null; // To hold the Sortable instance
 const dataTypesMap = {
     0: 'DigitalInput', 1: 'DigitalOutput', 2: 'AnalogInput', 3: 'SoftIO', 4: 'Timer'
 };
-// --- UPDATED operationMode Maps ---
 const operationModeMap = {
     0: 'None',          // Default/Raw/Volatile
     1: 'Rising Edge',   // DI
@@ -31,7 +30,7 @@ const operationModeShortMap = {
     8: 'Scle', // AI
     9: 'Pers'  // SoftIO
 };
-// --- END UPDATED Maps ---
+
 
 
 // --- NEW: Helper functions for Condition Badges ---
