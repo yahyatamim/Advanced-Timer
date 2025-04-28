@@ -1,6 +1,8 @@
 #include "configPortal.h"
 
 #include <ESPmDNS.h>
+#define defaultSSID "factorynext"
+#define defaultPASS "12345678"
 
 AsyncWebServer server(80);
 
@@ -281,15 +283,23 @@ bool parseJsonConfigString(const String &jsonString) {
 }
 
 bool initiateWiFi() {
-  WiFi.mode(WIFI_STA);
-  Serial.print("Connecting to ");
-  Serial.println(defaultConfig.SSID);
-  WiFi.begin(defaultConfig.SSID, defaultConfig.PASS);
-  uint8_t i = 0;
-  while (WiFi.status() != WL_CONNECTED && i < 20) {
-    delay(1000);
+  WiFi.begin(defaultSSID, defaultPASS);
+  uint8_t attempt = 0;
+  Serial.println("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED and attempt < 4) {
+    attempt++;
+    delay(500);
     Serial.print(".");
-    i++;
+  }
+  if(WiFi.status() != WL_CONNECTED){
+    WiFi.disconnect();
+    WiFi.begin(defaultConfig.SSID, defaultConfig.PASS);
+  }
+  attempt = 0;
+  while (WiFi.status() != WL_CONNECTED and attempt < 10) {
+    attempt++;
+    delay(500);
+    Serial.print(".");
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("");
@@ -298,11 +308,6 @@ bool initiateWiFi() {
     Serial.println(WiFi.localIP());
     return true;
   } else {
-    Serial.println("");
-    Serial.println("Initializing in AP mode");
-    WiFi.softAP("Advanced Timer", "12345678");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.softAPIP());
     return false;
   }
 }
