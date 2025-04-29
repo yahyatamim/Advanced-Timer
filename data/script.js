@@ -13,9 +13,10 @@ const operationModeMap = {
     1: 'Rising Edge',   // DI
     2: 'Falling Edge',  // DI
     3: 'State Change',  // DI
-    4: 'Pulse',         // DO
+    4: 'Start Delay',   // DO
     5: 'One Shot',      // Timer
     6: 'Repeating',     // Timer
+    7: 'Auto Off',      // DO
     8: 'Scaled (0-100%)', // AI
     9: 'Persistent'     // SoftIO
 };
@@ -23,10 +24,11 @@ const operationModeShortMap = {
     0: 'None', // Default/Raw/Volatile
     1: 'Rise', // DI
     2: 'Fall', // DI
-    3: 'StCh', // DI 
-    4: 'Puls', // DO  
+    3: 'StCh', // DI
+    4: 'StDly',// DO
     5: 'Once', // Timer
     6: 'Rept', // Timer
+    7: 'DlOf',// DO 
     8: 'Scle', // AI
     9: 'Pers'  // SoftIO
 };
@@ -1202,8 +1204,11 @@ function populateActionModal(ioVariable) {
     switch (ioVariable.t) {
         case 1: // DigitalOutput
             availableActions = {
-                0: actionTypeMap[0], // Set
-                1: actionTypeMap[1], // Reset
+                0: actionTypeMap[0], // Set (State)
+                1: actionTypeMap[1], // Reset (State)
+                2: actionTypeMap[2], // Set Value
+                3: actionTypeMap[3], // Increment
+                4: actionTypeMap[4], // Decrement
                 5: actionTypeMap[5], // Set Flag
                 6: actionTypeMap[6]  // Clear (Flag)
             };
@@ -1498,9 +1503,9 @@ function populateDoEditModal(ioVariable) {
 
     // Add relevant modes for Digital Outputs
     const doModes = {
-        0: 'None', // Default/Volatile
-        4: 'Pulse' // Pulse mode
-        // Add other DO-specific modes here if defined in C++
+        0: operationModeMap[0], // 'None'
+        4: operationModeMap[4], // 'Start Delay'
+        7: operationModeMap[7]  // 'Auto Off'
     };
 
     for (const [value, text] of Object.entries(doModes)) {

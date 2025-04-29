@@ -24,15 +24,16 @@ enum dataTypes { DigitalInput, DigitalOutput, AnalogInput, SoftIO, Timer };
 
 // Defines operational modes, primarily for Digital Inputs and Timers
 enum operationMode {
-  none,         // No specific mode / Not applicable
-  rising,       // Trigger on rising edge (DigitalInput)
-  falling,      // Trigger on falling edge (DigitalInput)
-  stateChange,  // Trigger on any state change (DigitalInput)
-  pulse,        // Generate a pulse (DigitalOutput - potentially future use)
-  oneShot,      // Timer runs once (Timer)
-  repeating,    // Timer restarts automatically (Timer)
-  scaled,       // Analog Input will be scaled to 0-100 range
-  persistent,   // SoftIO's value will be persistent accross reboot
+  none,         // 0: No specific mode / Not applicable
+  rising,       // 1: Trigger on rising edge (DigitalInput)
+  falling,      // 2: Trigger on falling edge (DigitalInput)
+  stateChange,  // 3: Trigger on any state change (DigitalInput)
+  startDelay,   // 4: Output turns ON after 'value' ms delay when set HIGH
+  oneShot,      // 5: Timer runs once (Timer)
+  repeating,    // 6: Timer restarts automatically (Timer)
+  autoOff,      // 7: Output turns  OFF after 'value' ms when set HIGH
+  scaled,       // 8: Analog Input will be scaled to 0-100 range
+  persistent,   // 9: SoftIO's value will be persistent accross reboot
 };
 
 // Defines comparison types used in Conditions
