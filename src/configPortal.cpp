@@ -132,8 +132,10 @@ String generateJsonConfigString() {
   for (size_t i = 0; i < numRules; i++) {
     JsonObject rule = rulesArray.add<JsonObject>();
     rule["n"] = rules[i].num;
-    rule["cg"] = rules[i].conditionGroup;
-    rule["ag"] = rules[i].actionGroup;
+    rule["cg"] = rules[i].useConditionGroup;
+    rule["ci"] = rules[i].conditionSourceId;
+    rule["ag"] = rules[i].useActionGroup;
+    rule["ai"] = rules[i].actionTargetId;
     rule["s"] = rules[i].status;
   }
   JsonArray ruleSequenceArray = doc["ruleSequence"].to<JsonArray>();
@@ -260,8 +262,10 @@ bool parseJsonConfigString(const String &jsonString) {
   int i_ru = 0;
   for (JsonObject ruleJson : ruArray) {
     rules[i_ru].num = ruleJson["n"] | rules[i_ru].num;
-    rules[i_ru].conditionGroup = ruleJson["cg"] | rules[i_ru].conditionGroup;
-    rules[i_ru].actionGroup = ruleJson["ag"] | rules[i_ru].actionGroup;
+    rules[i_ru].useConditionGroup = ruleJson["cg"] | false;
+    rules[i_ru].conditionSourceId = ruleJson["ci"] | 0;
+    rules[i_ru].useActionGroup = ruleJson["ag"] | false;
+    rules[i_ru].actionTargetId = ruleJson["ai"] | 0;
     rules[i_ru].status = ruleJson["s"] | rules[i_ru].status;
     i_ru++;
   }
@@ -291,7 +295,7 @@ bool initiateWiFi() {
     delay(500);
     Serial.print(".");
   }
-  if(WiFi.status() != WL_CONNECTED){
+  if (WiFi.status() != WL_CONNECTED) {
     WiFi.disconnect();
     WiFi.begin(defaultConfig.SSID, defaultConfig.PASS);
   }

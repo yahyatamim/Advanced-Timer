@@ -125,8 +125,10 @@ void InitializeDefaultLogicComponents() {
   }
   for (uint8_t i = 0; i < MAX_RULES; i++) {
     rules[i].num = i + 1;
-    rules[i].conditionGroup = 0;
-    rules[i].actionGroup = 0;
+    rules[i].useConditionGroup = false;  // Default to  a single condition
+    rules[i].conditionSourceId = 0;      // Default to 0 (no valid ID)
+    rules[i].useActionGroup = false;     // Default to  a single action
+    rules[i].actionTargetId = 0;         // Default to 0 (no valid ID)
     rules[i].status = false;
   }
   for (uint8_t i = 0; i < MAX_RULES; i++) {

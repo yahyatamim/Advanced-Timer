@@ -119,13 +119,17 @@ struct actionGroup {
   bool status;  // Is this group definition active/enabled?
 };
 
-// Represents a rule linking a Condition Group to an Action Group
+// Represents a rule linking a Condition Source (Group or Single) to an Action
+// Target (Group or Single)
 struct rule {
-  uint8_t num;             // Unique ID for this rule
-  uint8_t conditionGroup;  // 'num' of the Condition Group to evaluate
-  uint8_t actionGroup;     // 'num' of the Action Group to execute
+  uint8_t num;                // Unique ID for this rule
+  bool useConditionGroup;     // true: use group, false: use single condition
+  uint8_t conditionSourceId;  // Holds either conditionGroup OR condition
+  bool useActionGroup;     // Flag: true = use group, false = use single action
+  uint8_t actionTargetId;  // Holds either actionGroup 'num' OR action 'actNum'
   bool status;             // Is this rule definition active/enabled?
 };
+
 // --- End Struct Definitions ---
 
 // --- Extern Declarations for Global Data Arrays ---
