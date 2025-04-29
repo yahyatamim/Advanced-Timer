@@ -30,6 +30,15 @@ const operationModeShortMap = {
     8: 'Scle', // AI
     9: 'Pers'  // SoftIO
 };
+const actionTypeMap = {
+    0: 'Set',           // Set state/flag true
+    1: 'Reset',         // Set state/flag false
+    2: 'Set Value',     // Set numerical value
+    3: 'Increment',     // Increment numerical value
+    4: 'Decrement',     // Decrement numerical value
+    5: 'Set Flag',      // Set IOVariable flag true
+    6: 'Clear'          // Clear IOVariable flag / Reset Timer
+};
 
 
 
@@ -91,6 +100,58 @@ function getConditionBadge3(comparisonType, value) {
 }
 // --- End NEW Helper Functions ---
 
+// --- NEW: Helper functions for Action Badges ---
+function getActionBadge1(actionType) {
+    switch (actionType) {
+        case 0: // set (state)
+        case 1: // reset (state)
+            return { text: 'State', class: 'bg-primary', title: 'Affects IO Variable State' };
+        case 2: // setValue
+        case 3: // increment
+        case 4: // decrement
+            return { text: 'Value', class: 'bg-info text-dark', title: 'Affects IO Variable Value' };
+        case 5: // setFlag
+        case 6: // clear (flag or timer)
+            return { text: 'Flag', class: 'bg-warning text-dark', title: 'Affects IO Variable Flag' };
+        default:
+            return { text: 'Attr?', class: 'bg-secondary', title: 'Unknown Attribute' };
+    }
+}
+
+function getActionBadge2(actionType) {
+    switch (actionType) {
+        case 0: // set
+        case 1: // reset
+        case 2: // setValue
+        case 5: // setFlag
+        case 6: // clear
+            return { text: '=', class: 'bg-success', title: 'Assignment' };
+        case 3: // increment
+            return { text: '+', class: 'bg-success', title: 'Increment' };
+        case 4: // decrement
+            return { text: '-', class: 'bg-success', title: 'Decrement' };
+        default:
+            return { text: 'Op?', class: 'bg-secondary', title: 'Unknown Operation' };
+    }
+}
+
+function getActionBadge3(actionType, value) {
+    switch (actionType) {
+        case 0: // set
+        case 5: // setFlag
+            return { text: 'High', class: 'bg-success', title: 'Target: True / High' };
+        case 1: // reset
+        case 6: // clear
+            return { text: 'Low', class: 'bg-danger', title: 'Target: False / Low' };
+        case 2: // setValue
+        case 3: // increment (value indicates amount)
+        case 4: // decrement (value indicates amount)
+            return { text: value, class: 'bg-purple', title: `Value: ${value}` };
+        default:
+            return { text: 'Tgt?', class: 'bg-secondary', title: 'Unknown Target' };
+    }
+}
+// --- End NEW Action Badge Helper Functions ---
 
 // Function to fetch configuration from ESP32
 async function loadConfig() {
@@ -104,6 +165,7 @@ async function loadConfig() {
         populateIoVariables(currentConfig.ioVariables);
         initializeDragAndDrop();
         displayConditions();
+        displayActions();
         // Later, add calls here to populate other sections (IOs, Rules, etc.)
 
     } catch (error) {
@@ -567,9 +629,10 @@ function initializeDragAndDrop() {
     const softioList = document.getElementById('softio-list');
     const timersList = document.getElementById('timers-list');
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
+    const actionsDropZone = document.getElementById('actions-drop-zone');
     // Get other lists/zones later as needed
 
-    if (!diList || !doList || !aiList || !softioList || !timersList || !conditionsDropZone) { // <-- UPDATE CHECK
+    if (!diList || !doList || !aiList || !softioList || !timersList || !conditionsDropZone || !actionsDropZone) { // <-- UPDATE CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -620,9 +683,7 @@ function initializeDragAndDrop() {
         animation: 150,
         sort: false
     });
-    // --- END ADDED BLOCK ---
 
-    // --- Initialize Sortable for the Conditions Drop Zone (Target) ---
     new Sortable(conditionsDropZone, {
         group: {
             name: 'io-logic', // Allows dropping from DI or DO list
@@ -632,8 +693,6 @@ function initializeDragAndDrop() {
         animation: 150,
         sort: false,
         onAdd: function (evt) {
-            // This existing onAdd function should work fine as it reads
-            // data attributes (type, num) which are set correctly for both DI and DO.
             const itemEl = evt.item;
             const originalList = evt.from;
             const ioType = itemEl.dataset.type;
@@ -645,9 +704,33 @@ function initializeDragAndDrop() {
             const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === ioType && io.n === parseInt(ioNum, 10));
 
             if (ioVariable) {
-                // The existing populateConditionModal should also work fine,
-                // as it just displays the type/num/name it receives.
                 populateConditionModal(ioVariable);
+            } else {
+                console.error(`Could not find IOVariable data for: ${ioType} #${ioNum} after drop.`);
+                alert("Error: Could not find the dropped IO Variable's data.");
+            }
+        }
+    });
+
+    new Sortable(actionsDropZone, {
+        group: {
+            name: 'io-logic', // Allows dropping from any list in the 'io-logic' group
+            pull: false,      // Cannot drag items out of this zone
+            put: true         // Allows items to be dropped into this zone
+        },
+        animation: 150,
+        sort: false, // Don't allow sorting within the drop zone itself
+        onAdd: function (evt) {
+            const itemEl = evt.item; // The dragged element (clone)
+            const ioType = itemEl.dataset.type; // e.g., "DigitalOutput"
+            const ioNum = itemEl.dataset.num;   // e.g., "1"
+
+            console.log(`Dropped IO Variable: Type=${ioType}, Num=${ioNum} onto Actions zone.`);
+            itemEl.remove(); // Remove the clone from the DOM
+            const ioVariable = currentConfig.ioVariables.find(io => dataTypesMap[io.t] === ioType && io.n === parseInt(ioNum, 10));
+
+            if (ioVariable) {
+                populateActionModal(ioVariable);
             } else {
                 console.error(`Could not find IOVariable data for: ${ioType} #${ioNum} after drop.`);
                 alert("Error: Could not find the dropped IO Variable's data.");
@@ -871,36 +954,6 @@ function displayConditions() {
     attachEditConditionListeners();
 }
 
-// Ensure these helper functions for delete exist (from previous step or add them now)
-// function attachDeleteConditionListeners() {
-//     document.querySelectorAll('.delete-condition-btn').forEach(button => {
-//         // Remove existing listener first to prevent duplicates if function is called multiple times
-//         button.removeEventListener('click', handleDeleteConditionClick);
-//         button.addEventListener('click', handleDeleteConditionClick);
-//     });
-// }
-
-// function handleDeleteConditionClick(event) {
-//     const button = event.currentTarget;
-//     const listItem = button.closest('.condition-item');
-//     const conNum = parseInt(listItem.dataset.conNum, 10);
-
-//     if (confirm(`Are you sure you want to delete Condition C${conNum}? This will mark it inactive.`)) {
-//         // Find the condition in the config
-//         const condition = currentConfig.conditions.find(c => c.cn === conNum);
-//         if (condition) {
-//             condition.s = false; // Mark as inactive
-//             // IMPORTANT TODO: Also need to remove this condition's conNum from any conditionGroups that use it.
-//             // This requires iterating through currentConfig.conditionGroups and modifying their 'ca' arrays.
-//             // We will handle this logic later when implementing group editing.
-//             console.log(`Marked Condition C${conNum} as inactive.`);
-//             displayConditions(); // Refresh the list
-//             // Note: Changes are only in memory until "Save Configuration" is clicked.
-//         } else {
-//             console.error(`Could not find Condition C${conNum} to mark inactive.`);
-//         }
-//     }
-// }
 
 // Function to attach listeners to condition edit buttons
 function attachEditConditionListeners() {
@@ -1048,6 +1101,365 @@ function populateConditionModalForEdit(condition) {
     // modal.show(); // Usually not needed here
 }
 
+
+// Function to display active actions in the UI list (NEW 3-BADGE VERSION)
+function displayActions() {
+    const listElement = document.getElementById('actions-list'); // <<< Target actions-list
+    if (!listElement) {
+        console.error("Actions list element not found!"); // <<< Error message
+        return;
+    }
+
+    listElement.innerHTML = ''; // Clear existing list items
+
+    if (!currentConfig.actions || !Array.isArray(currentConfig.actions)) { // <<< Check actions data
+        console.warn("Actions data is missing or not an array."); // <<< Warning message
+        return;
+    }
+
+    currentConfig.actions.forEach(act => { // <<< Iterate through actions, use 'act'
+        if (act.s) { // Only display if status (s) is true (active)
+            const listItem = document.createElement('li');
+
+            listItem.className = 'list-group-item py-2 px-2 d-flex justify-content-between align-items-center action-item'; // <<< action-item class
+            listItem.dataset.actNum = act.an; // <<< Store action number (an)
+
+            const targetIo = currentConfig.ioVariables.find(io => io.t === act.t && io.n === act.tn); // <<< Use act.t, act.tn
+            const targetIoName = targetIo ? targetIo.nm : `IO ${act.tn}`; // <<< Use act.tn
+            const targetIoTypeStr = dataTypesMap[act.t] || `Type ${act.t}`; // <<< Use act.t
+            const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${act.tn}: ${targetIo.nm}` : `Unknown IO (Type ${act.t}, Num ${act.tn})`; // <<< Use act.t, act.tn
+
+            const badge1 = getActionBadge1(act.a);
+            const badge2 = getActionBadge2(act.a);
+            const badge3 = getActionBadge3(act.a, act.v);
+
+            listItem.innerHTML = `
+                <span class="action-number fs-5 fw-bold me-2" title="Action Number ${act.an}">A${act.an}</span>
+                <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+                    <div class="action-target-name small text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</div>
+                    <div class="action-badges"> 
+                        <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                        <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                        <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary edit-action-btn fs-6 p-1" title="Edit Action A${act.an}"
+                    data-bs-toggle="modal" data-bs-target="#createActionModal" 
+                    data-act-num="${act.an}"> 
+                    ⚙️
+                </button>
+            `;
+            listElement.appendChild(listItem);
+        }
+    });
+
+    // --- Attach listeners to the newly created edit buttons (Function to be created later) ---
+    attachEditActionListeners(); // <<< Call function to attach listeners for action edit buttons
+}
+
+function populateActionModal(ioVariable) {
+    const modalElement = document.getElementById('createActionModal');
+    if (!modalElement) {
+        console.error("Create Action Modal element not found!");
+        return;
+    }
+    // Get Bootstrap modal instance (or create if needed)
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+
+    // --- Get references to elements that need resetting for "Create" mode ---
+    const modalTitle = document.getElementById('createActionModalLabel');
+    const deleteButton = document.getElementById('deleteActionBtn');
+    const saveButton = document.getElementById('saveActionBtn');
+    const editNumHidden = document.getElementById('actionEditNum');
+    const targetDisplaySpan = document.getElementById('displayActionTarget');
+    const operationSelect = document.getElementById('actionOperation'); // <<< Action operation select
+    const valueGroup = document.getElementById('actionValueGroup');     // <<< Action value group
+    const valueInput = document.getElementById('actionValue');         // <<< Action value input
+
+    // --- Reset modal to "Create" state ---
+    modalTitle.textContent = 'Create New Action'; // Default title
+    deleteButton.style.display = 'none';          // Hide delete button
+    saveButton.textContent = 'Save Action';       // Default save button text
+    editNumHidden.value = '0';                    // Set edit number to 0 for new action
+    targetDisplaySpan.textContent = '';           // Clear the target display span initially
+
+    // --- Reset form elements ---
+    const form = document.getElementById('create-action-form');
+    form.reset(); // Reset standard form inputs (clears valueInput too)
+    valueGroup.style.display = 'none'; // Hide value input initially
+
+    // --- Populate hidden fields and display ---
+    const targetIoTypeStr = dataTypesMap[ioVariable.t]; // Get string like "DigitalOutput"
+    document.getElementById('actionTargetIoType').value = targetIoTypeStr;
+    document.getElementById('actionTargetIoNum').value = ioVariable.n;
+    targetDisplaySpan.textContent = `${targetIoTypeStr} #${ioVariable.n}: ${ioVariable.nm || `IO ${ioVariable.n}`}`;
+
+    // --- Dynamically populate action operation options ---
+    operationSelect.innerHTML = '<option value="" disabled selected>-- Select Operation --</option>'; // Clear existing options and add placeholder
+
+    // Define available actions based on target IO type (using numeric enum values)
+    let availableActions = {};
+    switch (ioVariable.t) {
+        case 1: // DigitalOutput
+            availableActions = {
+                0: actionTypeMap[0], // Set
+                1: actionTypeMap[1], // Reset
+                5: actionTypeMap[5], // Set Flag
+                6: actionTypeMap[6]  // Clear (Flag)
+            };
+            break;
+        case 3: // SoftIO
+            availableActions = {
+                0: actionTypeMap[0], // Set (State)
+                1: actionTypeMap[1], // Reset (State)
+                2: actionTypeMap[2], // Set Value
+                3: actionTypeMap[3], // Increment
+                4: actionTypeMap[4], // Decrement
+                5: actionTypeMap[5], // Set Flag
+                6: actionTypeMap[6]  // Clear (Flag)
+            };
+            break;
+        case 4: // Timer
+            availableActions = {
+                0: actionTypeMap[0], // Set (Start/Enable)
+                1: actionTypeMap[1], // Reset (Stop/Disable)
+                2: actionTypeMap[2], // Set Value (Preset)
+                6: actionTypeMap[6]  // Clear (Reset Timer)
+                // Note: Timers don't typically have flags set directly via actions
+            };
+            break;
+        case 0: // DigitalInput (Flags only)
+        case 2: // AnalogInput (Flags only)
+            availableActions = {
+                5: actionTypeMap[5], // Set Flag
+                6: actionTypeMap[6]  // Clear (Flag)
+            };
+            break;
+        default:
+            console.warn(`No specific actions defined for IO type ${ioVariable.t} (${targetIoTypeStr})`);
+            // Optionally add generic flag actions as a fallback
+            availableActions = {
+                5: actionTypeMap[5], // Set Flag
+                6: actionTypeMap[6]  // Clear (Flag)
+            };
+            break;
+    }
+
+    // Add options to the select dropdown
+    for (const [value, text] of Object.entries(availableActions)) {
+        const optionElement = document.createElement('option');
+        optionElement.value = value; // The numeric enum value
+        optionElement.textContent = text; // The descriptive text from actionTypeMap
+        operationSelect.appendChild(optionElement);
+    }
+
+    // --- Ensure listener for operation change is attached (will be done globally later) ---
+    // We'll add the event listener that shows/hides the value input in a later step.
+
+    // --- Show the modal ---
+    modal.show();
+}
+
+function saveAction() {
+    const modalElement = document.getElementById('createActionModal'); // <<< Action modal
+    const form = document.getElementById('create-action-form');       // <<< Action form
+
+    // --- Read data from the action modal form ---
+    const targetIoTypeStr = document.getElementById('actionTargetIoType').value;
+    const targetIoNum = parseInt(document.getElementById('actionTargetIoNum').value, 10);
+    const actionOperationValue = document.getElementById('actionOperation').value; // String value
+    const actionValueInput = document.getElementById('actionValue');
+    const actionValueGroup = document.getElementById('actionValueGroup');
+    const actionValue = actionValueGroup.style.display !== 'none'
+        ? parseInt(actionValueInput.value, 10) || 0 // Use 0 if parsing fails or hidden
+        : 0; // Default to 0 if value field is hidden
+    const editActNum = parseInt(document.getElementById('actionEditNum').value, 10); // *** Get the action number being edited ***
+
+    // --- Basic Validation ---
+    if (!targetIoTypeStr || isNaN(targetIoNum) || actionOperationValue === "") {
+        alert("Error: Missing required action information (Target IO or Operation).");
+        return;
+    }
+
+    // Convert targetIoTypeStr back to its numeric enum value
+    const targetIoTypeNum = Object.keys(dataTypesMap).find(key => dataTypesMap[key] === targetIoTypeStr);
+    if (targetIoTypeNum === undefined) {
+        alert("Error: Invalid Target IO Type.");
+        return;
+    }
+
+    let actionToUpdate = null;
+    let isNewAction = false;
+
+    // --- Determine if creating new or editing existing ---
+    if (editActNum > 0) {
+        // --- Editing existing action ---
+        actionToUpdate = currentConfig.actions.find(a => a.an === editActNum); // <<< Find by 'an'
+        if (!actionToUpdate) {
+            alert(`Error: Could not find Action A${editActNum} to update.`);
+            console.error(`Save failed: Action A${editActNum} not found in currentConfig.`);
+            return;
+        }
+        console.log(`Updating existing Action A${editActNum}`);
+    } else {
+        // --- Creating new action ---
+        isNewAction = true;
+        // Find the first available (inactive) action slot
+        let actionIndex = -1;
+        for (let i = 0; i < currentConfig.actions.length; i++) {
+            if (!currentConfig.actions[i].s) { // Find first where status (s) is false
+                actionIndex = i;
+                break;
+            }
+        }
+
+        if (actionIndex === -1) {
+            alert("Error: Maximum number of actions reached. Cannot create new action.");
+            // TODO: Potentially increase MAX_ACTIONS if needed
+            return;
+        }
+        actionToUpdate = currentConfig.actions[actionIndex];
+        console.log(`Creating new action in slot A${actionToUpdate.an}`); // <<< Use 'an'
+    }
+
+    // --- Update the action object in currentConfig ---
+    actionToUpdate.t = parseInt(targetIoTypeNum, 10); // Numeric type
+    actionToUpdate.tn = targetIoNum;
+    actionToUpdate.a = parseInt(actionOperationValue, 10); // Numeric action enum ('a')
+    actionToUpdate.v = actionValue;
+    actionToUpdate.s = true; // Ensure status is active
+
+    console.log(`Saved action A${actionToUpdate.an}:`, actionToUpdate); // <<< Use 'an'
+
+    // --- Close the modal ---
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+    if (modalInstance) {
+        modalInstance.hide();
+    }
+
+    // --- Refresh the actions list display ---
+    displayActions(); // <<< Call displayActions
+}
+
+function attachEditActionListeners() {
+    document.querySelectorAll('.edit-action-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates
+        button.removeEventListener('click', handleEditActionClick); // <<< Use new handler name
+        // Add the listener
+        button.addEventListener('click', handleEditActionClick); // <<< Call new handler
+    });
+}
+
+function handleEditActionClick(event) {
+    const button = event.currentTarget;
+    const actNum = parseInt(button.dataset.actNum, 10); // <<< Use data-act-num
+    console.log(`Edit button clicked for Action A${actNum}`); // <<< Log action number
+    const action = currentConfig.actions.find(a => a.an === actNum); // <<< Find by 'an'
+    if (action) {
+        populateActionModalForEdit(action); // <<< Call new function
+    } else {
+        console.error(`Could not find Action data for: A${actNum}`);
+        alert("Error: Could not load action data for editing.");
+        event.stopPropagation(); // Prevent the modal from opening if data is missing
+    }
+}
+
+function populateActionModalForEdit(action) {
+    const modalElement = document.getElementById('createActionModal'); // <<< Action modal
+    if (!modalElement) {
+        console.error("Create/Edit Action Modal element not found!");
+        return;
+    }
+
+    // --- Get references to modal elements ---
+    const modalTitle = document.getElementById('createActionModalLabel');
+    const form = document.getElementById('create-action-form');
+    const targetIoTypeHidden = document.getElementById('actionTargetIoType');
+    const targetIoNumHidden = document.getElementById('actionTargetIoNum');
+    const editNumHidden = document.getElementById('actionEditNum');
+    const targetDisplaySpan = document.getElementById('displayActionTarget');
+    const operationSelect = document.getElementById('actionOperation'); // <<< Action operation select
+    const valueGroup = document.getElementById('actionValueGroup');     // <<< Action value group
+    const valueInput = document.getElementById('actionValue');         // <<< Action value input
+    const deleteButton = document.getElementById('deleteActionBtn');     // <<< Action delete button
+    const saveButton = document.getElementById('saveActionBtn');         // <<< Action save button
+
+    form.reset(); // Resets standard inputs, select needs manual setting
+
+    modalTitle.textContent = `Edit Action A${action.an}`; // Set title for editing
+    editNumHidden.value = action.an; // Store the action number being edited
+
+    const targetIo = currentConfig.ioVariables.find(io => io.t === action.t && io.n === action.tn);
+    const targetIoName = targetIo ? targetIo.nm : `IO ${action.tn}`;
+    const targetIoTypeStr = dataTypesMap[action.t] || `Type ${action.t}`;
+
+    targetIoTypeHidden.value = targetIoTypeStr;
+    targetIoNumHidden.value = action.tn;
+    targetDisplaySpan.textContent = `${targetIoTypeStr} #${action.tn}: ${targetIoName}`; // Set the display span
+    operationSelect.innerHTML = '<option value="" disabled>-- Select Operation --</option>'; // Clear existing
+
+    let availableActions = {}; // Determine available actions based on target type
+    switch (action.t) { // Use action.t (target type)
+        case 1: // DigitalOutput
+            availableActions = { 0: actionTypeMap[0], 1: actionTypeMap[1], 5: actionTypeMap[5], 6: actionTypeMap[6] };
+            break;
+        case 3: // SoftIO
+            availableActions = { 0: actionTypeMap[0], 1: actionTypeMap[1], 2: actionTypeMap[2], 3: actionTypeMap[3], 4: actionTypeMap[4], 5: actionTypeMap[5], 6: actionTypeMap[6] };
+            break;
+        case 4: // Timer
+            availableActions = { 0: actionTypeMap[0], 1: actionTypeMap[1], 2: actionTypeMap[2], 6: actionTypeMap[6] };
+            break;
+        case 0: // DigitalInput
+        case 2: // AnalogInput
+            availableActions = { 5: actionTypeMap[5], 6: actionTypeMap[6] };
+            break;
+        default: // Fallback
+            availableActions = { 5: actionTypeMap[5], 6: actionTypeMap[6] };
+            break;
+    }
+    for (const [value, text] of Object.entries(availableActions)) {
+        const optionElement = document.createElement('option');
+        optionElement.value = value;
+        optionElement.textContent = text;
+        operationSelect.appendChild(optionElement);
+    }
+    operationSelect.value = action.a; // *** Select the action's current operation type ('a') ***
+    valueInput.value = action.v; // Set the value from action.v
+    if ([2, 3, 4].includes(action.a)) { // Actions requiring value: setValue(2), increment(3), decrement(4)
+        valueGroup.style.display = 'block';
+    } else {
+        valueGroup.style.display = 'none';
+    }
+    deleteButton.style.display = 'block'; // *** Show the delete button ***
+    saveButton.textContent = 'Update Action'; // Change save button text
+}
+
+function handleDeleteAction() {
+    const modalElement = document.getElementById('createActionModal'); // <<< Action modal
+    const editActNumInput = document.getElementById('actionEditNum');  // <<< Action edit num input
+    const actNum = parseInt(editActNumInput.value, 10);
+
+    if (isNaN(actNum) || actNum <= 0) {
+        console.error("Invalid action number found for deletion:", editActNumInput.value);
+        alert("Error: Cannot determine which action to delete.");
+        return;
+    }
+    if (confirm(`Are you sure you want to delete Action A${actNum}? This will mark it inactive.`)) {
+        const action = currentConfig.actions.find(a => a.an === actNum); // <<< Find by 'an'
+        if (action) {
+            action.s = false; // Mark as inactive by setting status 's' to false
+            console.log(`Marked Action A${actNum} as inactive.`);
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            displayActions(); // <<< Refresh the action list
+        } else {
+            console.error(`Could not find Action A${actNum} to mark inactive.`);
+            alert(`Error: Could not find Action A${actNum} to delete.`);
+        }
+    }
+}
 
 // --- NEW: Function to populate the Digital Input Edit Modal ---
 // (Moved logic from handleEditButtonClick here for clarity)
@@ -1403,34 +1815,42 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteConditionButton.addEventListener('click', handleDeleteCondition); // Attach the delete handler
     }
 
-
-    // --- ADD THESE LISTENERS BACK ---
-    // Listener for the Condition Comparison dropdown
     const conditionComparisonSelect = document.getElementById('conditionComparison');
     const conditionValueGroup = document.getElementById('conditionValueGroup');
-
     if (conditionComparisonSelect && conditionValueGroup) {
         conditionComparisonSelect.addEventListener('change', function () {
             const selectedComparison = parseInt(this.value, 10);
-            // Comparisons requiring a value: isEqual(2), isLess(3), isGreater(4)
             if ([2, 3, 4].includes(selectedComparison)) {
                 conditionValueGroup.style.display = 'block'; // Show the value input
             } else {
                 conditionValueGroup.style.display = 'none'; // Hide the value input
             }
         });
-    } else {
-        console.error("Could not find condition modal comparison or value elements to attach listener.");
     }
-
-    // Listener for the Save Condition button in the modal
     const saveConditionButton = document.getElementById('saveConditionBtn');
     if (saveConditionButton) {
         saveConditionButton.addEventListener('click', saveCondition); // Attach the saveCondition function
-    } else {
-        console.error("Could not find Save Condition button element.");
     }
-    // --- END OF ADDED LISTENERS ---
 
+    const actionOperationSelect = document.getElementById('actionOperation');
+    const actionValueGroup = document.getElementById('actionValueGroup');
+    if (actionOperationSelect && actionValueGroup) {
+        actionOperationSelect.addEventListener('change', function () {
+            const selectedActionType = parseInt(this.value, 10);
+            if ([2, 3, 4].includes(selectedActionType)) {
+                actionValueGroup.style.display = 'block'; // Show the value input
+            } else {
+                actionValueGroup.style.display = 'none'; // Hide the value input
+            }
+        });
+    }
+    const saveActionButton = document.getElementById('saveActionBtn');
+    if (saveActionButton) {
+        saveActionButton.addEventListener('click', saveAction); // Attach the saveAction function
+    }
+    const deleteActionButton = document.getElementById('deleteActionBtn');
+    if (deleteActionButton) {
+        deleteActionButton.addEventListener('click', handleDeleteAction); // Attach the delete handler
+    }
 });
 
