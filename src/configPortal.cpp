@@ -1,7 +1,7 @@
 #include "configPortal.h"
 
 #include <ESPmDNS.h>
-#define defaultSSID "factorynext"
+#define defaultSSID "advancedtimer"
 #define defaultPASS "12345678"
 
 AsyncWebServer server(80);
