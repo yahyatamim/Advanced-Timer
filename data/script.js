@@ -3,6 +3,8 @@ let currentConfig = {};
 
 let ioVariableSortable = null; // To hold the Sortable instance
 
+let currentEditingConditionGroupNum = 0;
+
 // --- Enum Maps (for display/lookup) ---
 // Should match enums in dataStructure.h
 const dataTypesMap = {
@@ -41,10 +43,6 @@ const actionTypeMap = {
     5: 'Set Flag',      // Set IOVariable flag true
     6: 'Clear'          // Clear IOVariable flag / Reset Timer
 };
-
-
-
-// --- NEW: Helper functions for Condition Badges ---
 
 function getConditionBadge1(comparisonType) {
     // Badge 1: Attribute Field (State, Value, Flag)
@@ -100,9 +98,7 @@ function getConditionBadge3(comparisonType, value) {
             return { text: 'Tgt?', class: 'bg-secondary', title: 'Unknown Target' };
     }
 }
-// --- End NEW Helper Functions ---
 
-// --- NEW: Helper functions for Action Badges ---
 function getActionBadge1(actionType) {
     switch (actionType) {
         case 0: // set (state)
@@ -153,9 +149,7 @@ function getActionBadge3(actionType, value) {
             return { text: 'Tgt?', class: 'bg-secondary', title: 'Unknown Target' };
     }
 }
-// --- End NEW Action Badge Helper Functions ---
 
-// Function to fetch configuration from ESP32
 async function loadConfig() {
     try {
         const response = await fetch('/config');
@@ -168,6 +162,8 @@ async function loadConfig() {
         initializeDragAndDrop();
         displayConditions();
         displayActions();
+        displayConditionGroups();
+        displayActionGroups();
         // Later, add calls here to populate other sections (IOs, Rules, etc.)
 
     } catch (error) {
@@ -176,7 +172,6 @@ async function loadConfig() {
     }
 }
 
-// Function to populate the Device Settings form fields
 function populateDeviceSettingsForm(settings) {
     if (!settings) return; // Handle case where deviceSettings might be missing
 
@@ -186,7 +181,6 @@ function populateDeviceSettingsForm(settings) {
     document.getElementById('runProgram').checked = settings.run || false;
 }
 
-// Function to populate the IO Variables lists (starting with Digital Inputs)
 function populateIoVariables(ioVariables) {
     const diList = document.getElementById('digital-inputs-list');
     const doList = document.getElementById('digital-outputs-list');
@@ -440,7 +434,6 @@ function populateIoVariables(ioVariables) {
     attachEditButtonListeners();
 }
 
-// Function to attach listeners to edit buttons (call after populating)
 function attachEditButtonListeners() {
     document.querySelectorAll('.edit-io-btn').forEach(button => {
         // Remove existing listener to prevent duplicates if re-populating
@@ -451,8 +444,6 @@ function attachEditButtonListeners() {
     });
 }
 
-
-// Handler for when an edit button is clicked
 function handleEditButtonClick(event) {
     const button = event.currentTarget;
     const typeStr = button.dataset.type; // "DigitalInput" or "DigitalOutput"
@@ -483,7 +474,6 @@ function handleEditButtonClick(event) {
     }
 }
 
-// Function to handle saving changes from the IO Variable modal
 function saveIoVariableChanges() {
     const modal = document.getElementById('editIoVariableModal');
 
@@ -534,8 +524,6 @@ function saveIoVariableChanges() {
     }
 }
 
-
-// Function to save configuration to ESP32
 async function saveConfig() {
     // --- Get button reference ---
     const saveButton = document.getElementById('saveConfigBtn');
@@ -623,7 +611,6 @@ async function saveConfig() {
     }
 }
 
-// Function to initialize drag-and-drop functionality
 function initializeDragAndDrop() {
     const diList = document.getElementById('digital-inputs-list');
     const doList = document.getElementById('digital-outputs-list');
@@ -632,9 +619,14 @@ function initializeDragAndDrop() {
     const timersList = document.getElementById('timers-list');
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
     const actionsDropZone = document.getElementById('actions-drop-zone');
+    const conditionsList = document.getElementById('conditions-list'); // The source list of all conditions
+    const conditionGroupEditorDropZone = document.getElementById('condition-group-drop-zone');
+    const editableConditionGroupMembersUL = document.getElementById('editable-condition-group-members');
     // Get other lists/zones later as needed
 
-    if (!diList || !doList || !aiList || !softioList || !timersList || !conditionsDropZone || !actionsDropZone) { // <-- UPDATE CHECK
+    if (!diList || !doList || !aiList || !softioList || !timersList ||
+        !conditionsDropZone || !actionsDropZone ||
+        !conditionsList || !conditionGroupEditorDropZone || !editableConditionGroupMembersUL) { // <-- UPDATED CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -740,11 +732,67 @@ function initializeDragAndDrop() {
         }
     });
 
+    new Sortable(conditionsList, {
+        group: {
+            name: 'conditions-to-group', // A new group name for this interaction
+            pull: 'clone', // Clone the item when dragging
+            put: false     // Cannot drop items into this list from elsewhere
+        },
+        animation: 150,
+        sort: false // Don't allow sorting within the main conditions-list itself
+    });
+
+    // --- NEW: Make the Condition Group Editor's drop zone a target ---
+    new Sortable(conditionGroupEditorDropZone, {
+        group: {
+            name: 'conditions-to-group', // Must match the source list's group name
+            pull: false, // Cannot drag items out of this drop zone
+            put: true    // Allows items to be dropped into this zone
+        },
+        animation: 150,
+        sort: false, // The drop zone itself is not for sorting
+        onAdd: function (evt) {
+            const itemEl = evt.item; // The dragged (cloned) condition item
+            const conNum = parseInt(itemEl.dataset.conNum, 10);
+
+            // Remove the visual clone from the drop zone immediately
+            itemEl.remove();
+
+            // Check if the editor is actually visible
+            const editorDiv = document.getElementById('condition-group-editor');
+            if (!editorDiv || editorDiv.style.display === 'none') {
+                console.warn("Condition group editor is not visible. Drop ignored.");
+                return;
+            }
+
+            // Find the actual condition data from currentConfig
+            const conditionData = currentConfig.conditions.find(c => c.cn === conNum && c.s);
+
+            if (conditionData) {
+                // Use the helper function to add the condition to the editor's list.
+                // This function handles duplicate checks, creating the LI,
+                // removing placeholders, and attaching remove button listeners.
+                addConditionToEditorList(conditionData);
+                // The addConditionToEditorList function will log success or if it was a duplicate.
+            } else {
+                console.error(`Could not find active condition data for C${conNum}.`);
+                alert(`Error: Could not find data for Condition C${conNum}. It might be inactive or deleted.`);
+            }
+        }
+    });
+
+    // --- NEW: Make the 'editable-condition-group-members' UL sortable for reordering ---
+    new Sortable(editableConditionGroupMembersUL, {
+        group: 'condition-group-members-internal', // A unique group name for internal sorting
+        animation: 150,
+        handle: '.condition-group-editor-member', // Optional: specify a handle if needed
+        // onEnd: function (evt) { /* Logic to update order for saving, if needed immediately */ }
+    });
+
     // Add initialization for other lists/zones later
     console.log("Drag and drop initialized for IO Variables -> Conditions Drop Zone."); // Update log slightly
 }
 
-// Function to populate and show the Create Condition modal
 function populateConditionModal(ioVariable) {
     const modalElement = document.getElementById('createConditionModal');
     if (!modalElement) {
@@ -809,8 +857,6 @@ function populateConditionModal(ioVariable) {
     modal.show();
 }
 
-
-// Function to handle saving a new or updated condition from the modal
 function saveCondition() {
     const modalElement = document.getElementById('createConditionModal');
     const form = document.getElementById('create-condition-form');
@@ -891,9 +937,6 @@ function saveCondition() {
     displayConditions();
 }
 
-
-
-// Function to display active conditions in the UI list (NEW 3-BADGE VERSION)
 function displayConditions() {
     const listElement = document.getElementById('conditions-list');
     if (!listElement) {
@@ -956,8 +999,6 @@ function displayConditions() {
     attachEditConditionListeners();
 }
 
-
-// Function to attach listeners to condition edit buttons
 function attachEditConditionListeners() {
     document.querySelectorAll('.edit-condition-btn').forEach(button => {
         // Remove existing listener to prevent duplicates
@@ -967,7 +1008,6 @@ function attachEditConditionListeners() {
     });
 }
 
-// Handler for when a condition edit button (⚙️) is clicked
 function handleEditConditionClick(event) {
     const button = event.currentTarget;
     const conNum = parseInt(button.dataset.conNum, 10);
@@ -989,7 +1029,6 @@ function handleEditConditionClick(event) {
     // unless we stop propagation.
 }
 
-// Function to handle deleting (marking inactive) a condition from the modal
 function handleDeleteCondition() {
     const modalElement = document.getElementById('createConditionModal');
     const editConNumInput = document.getElementById('conditionEditNum');
@@ -1027,8 +1066,6 @@ function handleDeleteCondition() {
     }
 }
 
-
-// Function to populate and show the Create/Edit Condition modal FOR EDITING
 function populateConditionModalForEdit(condition) {
     const modalElement = document.getElementById('createConditionModal');
     if (!modalElement) {
@@ -1103,8 +1140,6 @@ function populateConditionModalForEdit(condition) {
     // modal.show(); // Usually not needed here
 }
 
-
-// Function to display active actions in the UI list (NEW 3-BADGE VERSION)
 function displayActions() {
     const listElement = document.getElementById('actions-list'); // <<< Target actions-list
     if (!listElement) {
@@ -1466,8 +1501,6 @@ function handleDeleteAction() {
     }
 }
 
-// --- NEW: Function to populate the Digital Input Edit Modal ---
-// (Moved logic from handleEditButtonClick here for clarity)
 function populateDiEditModal(ioVariable) {
     const modal = document.getElementById('editIoVariableModal');
     const typeStr = dataTypesMap[ioVariable.t]; // Should be "DigitalInput"
@@ -1484,7 +1517,6 @@ function populateDiEditModal(ioVariable) {
     // TODO: Dynamically populate DI modes if they differ significantly in the future
 }
 
-// --- NEW: Function to populate the Digital Output Edit Modal ---
 function populateDoEditModal(ioVariable) {
     const modal = document.getElementById('editDoVariableModal'); // Target the DO modal
     const typeStr = dataTypesMap[ioVariable.t]; // Should be "DigitalOutput"
@@ -1517,7 +1549,6 @@ function populateDoEditModal(ioVariable) {
     modeSelect.value = ioVariable.m; // Set the current selection
 }
 
-// --- NEW: Function to populate the Analog Input Edit Modal ---
 function populateAiEditModal(ioVariable) {
     const modal = document.getElementById('editAiVariableModal'); // Target the AI modal
     const typeStr = dataTypesMap[ioVariable.t]; // Should be "AnalogInput"
@@ -1550,7 +1581,6 @@ function populateAiEditModal(ioVariable) {
     modeSelect.value = ioVariable.m; // Set the current selection
 }
 
-// --- NEW: Function to populate the SoftIO Edit Modal ---
 function populateSoftIoEditModal(ioVariable) {
     const modal = document.getElementById('editSoftIoVariableModal');
     const typeStr = dataTypesMap[ioVariable.t]; // "SoftIO"
@@ -1581,8 +1611,6 @@ function populateSoftIoEditModal(ioVariable) {
     modeSelect.value = ioVariable.m; // Set current selection
 }
 
-
-// --- Function to handle saving changes from the DO Variable modal ---
 function saveDoVariableChanges() {
     const modal = document.getElementById('editDoVariableModal'); // Target DO modal
 
@@ -1628,7 +1656,6 @@ function saveDoVariableChanges() {
     }
 }
 
-// --- NEW: Function to handle saving changes from the AI Variable modal ---
 function saveAiVariableChanges() {
     const modal = document.getElementById('editAiVariableModal'); // Target AI modal
 
@@ -1674,7 +1701,6 @@ function saveAiVariableChanges() {
     }
 }
 
-// --- NEW: Function to populate the Timer Edit Modal ---
 function populateTimerEditModal(ioVariable) {
     const modal = document.getElementById('editTimerVariableModal');
     const typeStr = dataTypesMap[ioVariable.t]; // "Timer"
@@ -1707,7 +1733,6 @@ function populateTimerEditModal(ioVariable) {
     // NOTE: We are NOT populating the preset value field here, as it was removed from HTML.
 }
 
-// --- NEW: Function to handle saving changes from the SoftIO Variable modal ---
 function saveSoftIoVariableChanges() {
     const modal = document.getElementById('editSoftIoVariableModal');
 
@@ -1746,7 +1771,6 @@ function saveSoftIoVariableChanges() {
     }
 }
 
-// --- NEW: Function to handle saving changes from the Timer Variable modal ---
 function saveTimerVariableChanges() {
     const modal = document.getElementById('editTimerVariableModal');
 
@@ -1786,6 +1810,535 @@ function saveTimerVariableChanges() {
         alert("Error: Could not save changes. IO Variable not found.");
     }
 }
+
+function displayConditionGroups() {
+    const listElement = document.getElementById('condition-groups-list');
+    if (!listElement) {
+        console.error("Condition Groups list element not found!");
+        return;
+    }
+
+    listElement.innerHTML = ''; // Clear existing list items
+
+    if (!currentConfig.conditionGroups || !Array.isArray(currentConfig.conditionGroups)) {
+        console.warn("Condition Groups data is missing or not an array.");
+        return;
+    }
+
+    currentConfig.conditionGroups.forEach(group => {
+        // Only display if status (s) is true (active) and the group has at least one member
+        // We check the first slot in the array for simplicity, assuming 0 means empty.
+        // Use group.ca as this is the key in the JavaScript currentConfig object.
+        if (group.s && group.ca && group.ca[0] !== 0) {
+            const listItem = document.createElement('li');
+            // Use list-group-item and flexbox for layout
+            listItem.className = 'list-group-item py-2 px-2 condition-group-item'; // Add a specific class
+
+            // Store group number for reference
+            listItem.dataset.groupNum = group.n;
+
+            // Determine Logic Badge
+            const logicText = group.l === 0 ? 'AND' : 'OR'; // 0: andLogic, 1: orLogic
+            const logicClass = group.l === 0 ? 'bg-success' : 'bg-warning text-dark'; // Green for AND, Yellow for OR
+            const logicTitle = group.l === 0 ? 'All conditions must be true' : 'Any condition can be true';
+
+            // Generate a unique ID for the collapsible body
+            const collapseId = `collapseConditionGroup${group.n}`;
+
+            // --- Build the header (always visible) ---
+            const headerHtml = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Group ID and Logic Badge -->
+                    <div class="d-flex align-items-center flex-grow-1 me-2">
+                        <span class="condition-group-number fs-5 fw-bold me-2" title="Condition Group Number ${group.n}">CG${group.n}</span>
+                        <span class="badge ${logicClass} me-2" title="${logicTitle}">${logicText}</span>
+                        <!-- Optional: Add group name here if you add user-defined names later -->
+                    </div>
+
+                    <!-- Controls (Collapse/Expand, Edit) -->
+                    <div class="d-flex align-items-center">
+                        <!-- Collapse/Expand Button -->
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 me-2 collapse-toggle-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                                aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
+                            <span class="collapse-icon">►</span> <!-- Default to collapsed icon -->
+                        </button>
+                        <!-- Edit Button -->
+                        <button class="btn btn-sm btn-outline-secondary edit-group-btn fs-6 p-1" title="Edit Condition Group CG${group.n}"
+                                data-group-type="Condition" data-group-num="${group.n}">
+                            ⚙️
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // --- Build the collapsible body (initially hidden) ---
+            let membersHtml = '';
+            // Filter out the 0 placeholders and map to list items
+            const activeMembers = group.ca.filter(conNum => conNum > 0);
+
+            if (activeMembers.length > 0) {
+                membersHtml = activeMembers.map(conNum => {
+                    // Find the actual condition object to get its details for display
+                    const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s);
+                    if (condition) {
+                        // Find the target IO Variable for context
+                        const targetIo = currentConfig.ioVariables.find(io => io.t === condition.t && io.n === condition.tn);
+                        const targetIoName = targetIo ? targetIo.nm : `IO ${condition.tn}`; // Use name or fallback
+                        const targetIoTypeStr = dataTypesMap[condition.t] || `Type ${condition.t}`;
+                        const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${condition.tn}: ${targetIo.nm}` : `Unknown IO (Type ${condition.t}, Num ${condition.tn})`;
+
+                        // Get badge details using helper functions (reusing condition badges)
+                        const badge1 = getConditionBadge1(condition.cp);
+                        const badge2 = getConditionBadge2(condition.cp);
+                        const badge3 = getConditionBadge3(condition.cp, condition.v);
+
+                        // Display member condition ID and a brief summary
+                        return `
+                            <li class="list-group-item py-1 px-2 d-flex align-items-center small">
+                                <span class="condition-number me-2" title="Condition Number ${conNum}">C${conNum}</span>
+                                <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+                                    <div class="condition-target-name text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</div>
+                                    <div class="condition-badges">
+                                        <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                                        <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                                        <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                                    </div>
+                                </div>
+                                <!-- No individual edit/delete here in display mode -->
+                            </li>
+                        `;
+                    } else {
+                        // Handle case where a member condition is not found (e.g., deleted)
+                        return `<li class="list-group-item py-1 px-2 text-danger small">C${conNum} (Not Found/Inactive)</li>`;
+                    }
+                }).join(''); // Join the array of list items into a single string
+            } else {
+                membersHtml = '<li class="list-group-item py-1 px-2 text-muted small">No members added yet.</li>';
+            }
+
+
+            const bodyHtml = `
+                <div class="collapse" id="${collapseId}">
+                    <ul class="list-group list-group-flush mt-2">
+                        ${membersHtml}
+                    </ul>
+                </div>
+            `;
+
+            // Combine header and body
+            listItem.innerHTML = headerHtml + bodyHtml;
+
+            // Add the list item to the UI list
+            listElement.appendChild(listItem);
+        }
+    });
+
+    // --- Attach event listeners ---
+    attachConditionGroupListeners();
+}
+
+function attachConditionGroupListeners() {
+    // Listeners for collapse/expand icons (handled by Bootstrap data-bs-toggle)
+    // We just need to update the icon itself when the collapse event fires
+    document.querySelectorAll('.condition-group-item .collapse-toggle-btn').forEach(button => {
+        const collapseElement = document.getElementById(button.dataset.bsTarget.substring(1)); // Get the target collapse element
+        if (collapseElement) {
+            // Remove existing listeners to prevent duplicates
+            button.removeEventListener('click', handleCollapseToggleIcon); // Use a specific handler name
+            collapseElement.removeEventListener('show.bs.collapse', handleCollapseShow);
+            collapseElement.removeEventListener('hide.bs.collapse', handleCollapseHide);
+
+            // Add new listeners
+            // The click listener is primarily for Bootstrap, but we can add our own if needed for complex logic
+            // For simple icon toggle, Bootstrap's events are better.
+            button.addEventListener('click', handleCollapseToggleIcon); // Add a click listener to the button itself
+
+            // Listen to Bootstrap's collapse events
+            collapseElement.addEventListener('show.bs.collapse', handleCollapseShow);
+            collapseElement.addEventListener('hide.bs.collapse', handleCollapseHide);
+
+            // Set initial icon state based on current collapse state (if page reloaded with state preserved)
+            if (collapseElement.classList.contains('show')) {
+                button.querySelector('.collapse-icon').textContent = '▼';
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                button.querySelector('.collapse-icon').textContent = '►';
+                button.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
+
+    // Listeners for Edit buttons
+    document.querySelectorAll('.condition-group-item .edit-group-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates
+        button.removeEventListener('click', handleEditGroupClick); // Use a specific handler name
+        // Add the listener
+        button.addEventListener('click', handleEditGroupClick);
+    });
+}
+
+function handleCollapseToggleIcon(event) {
+    // This handler is simple; Bootstrap does the heavy lifting.
+    // We just need to make sure the icon updates *after* Bootstrap toggles the state.
+    // The show.bs.collapse and hide.bs.collapse events are better for reliable icon updates.
+    // This click handler is mostly a fallback or for immediate visual feedback before the transition.
+    const button = event.currentTarget;
+    const iconSpan = button.querySelector('.collapse-icon');
+    // Toggle icon based on current state *before* Bootstrap's toggle might finish
+    // A slight delay or listening to the Bootstrap events is more robust.
+    // Let's rely on the Bootstrap event handlers below for accuracy.
+}
+
+function handleCollapseShow(event) {
+    // When the collapse area is shown, change the button icon to '▼'
+    const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
+    if (button) {
+        button.querySelector('.collapse-icon').textContent = '▼';
+        button.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function handleCollapseHide(event) {
+    // When the collapse area is hidden, change the button icon to '►'
+    const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
+    if (button) {
+        button.querySelector('.collapse-icon').textContent = '►';
+        button.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function handleEditGroupClick(event) {
+    const button = event.currentTarget;
+    const groupType = button.dataset.groupType; // "Condition" or "Action"
+    const groupNum = parseInt(button.dataset.groupNum, 10);
+
+    if (groupType === "Condition") {
+        // Find the condition group data from currentConfig
+        const groupData = currentConfig.conditionGroups.find(cg => cg.n === groupNum && cg.s);
+
+        if (groupData) {
+            console.log(`Editing Condition Group CG${groupNum} with data:`, groupData);
+            showConditionGroupEditor(groupData); // Pass the found group data
+        } else {
+            console.error(`Could not find active Condition Group CG${groupNum} to edit.`);
+            alert(`Error: Condition Group CG${groupNum} not found or is inactive.`);
+        }
+    } else if (groupType === "Action") {
+        // Placeholder for Action Group editing
+        console.log(`Edit button clicked for Action Group AG${groupNum}`);
+        alert(`Editing Action Group AG${groupNum} - Editor coming soon!`);
+    } else {
+        console.warn(`Edit button clicked for unknown group type: ${groupType}`);
+    }
+}
+
+function handleCreateConditionGroupClick() {
+    console.log("Create Condition Group button clicked.");
+    showConditionGroupEditor(); // Call the function to show the editor in "new" mode
+}
+
+function showConditionGroupEditor(groupData = null) {
+    const editorDiv = document.getElementById('condition-group-editor');
+    const listDiv = document.getElementById('condition-groups-list'); // The list of groups
+    const editorTitle = document.getElementById('condition-editor-title');
+    const logicToggle = document.getElementById('conditionGroupLogicToggle');
+    const membersListUL = document.getElementById('editable-condition-group-members');
+    const deleteButton = document.getElementById('deleteConditionGroupBtn');
+
+    if (!editorDiv || !listDiv || !editorTitle || !logicToggle || !membersListUL || !deleteButton) {
+        console.error("Missing editor elements for showConditionGroupEditor!");
+        return;
+    }
+
+    // Hide the list and show the editor
+    listDiv.style.display = 'none';
+    editorDiv.style.display = 'block';
+
+    // Clear previous members from the editor list
+    membersListUL.innerHTML = '';
+
+    if (groupData) {
+        // --- Populate for Editing Existing Group ---
+        console.log(`Populating editor for Condition Group CG${groupData.n}`);
+        currentEditingConditionGroupNum = groupData.n;
+        editorTitle.textContent = `Edit Condition Group CG${groupData.n}`;
+        logicToggle.checked = groupData.l === 1; // 1 for OR, 0 for AND
+        deleteButton.style.display = 'inline-block';
+
+        const activeMembersInGroup = groupData.ca.filter(conNum => conNum > 0);
+
+        if (activeMembersInGroup.length > 0) {
+            activeMembersInGroup.forEach(conNum => {
+                const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s); // Find active condition
+                if (condition) {
+                    addConditionToEditorList(condition); // This function adds to UL and attaches listeners
+                } else {
+                    // Condition from group.conditionArray not found or is inactive
+                    const memberLi = document.createElement('li');
+                    memberLi.className = 'list-group-item py-1 px-2 d-flex align-items-center small text-danger';
+                    memberLi.textContent = `C${conNum} (Not Found/Inactive)`;
+                    membersListUL.appendChild(memberLi);
+                }
+            });
+        } else {
+            // No active members in this group, add placeholder
+            const placeholder = document.createElement('li');
+            placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+            placeholder.textContent = 'Drag individual Conditions here';
+            membersListUL.appendChild(placeholder);
+        }
+        // Listeners for remove buttons are handled by addConditionToEditorList
+
+    } else {
+        // --- Populate for Creating New Group ---
+        console.log("Populating editor for New Condition Group");
+        currentEditingConditionGroupNum = 0;
+        editorTitle.textContent = 'New Condition Group';
+        logicToggle.checked = false; // Default to AND logic (0)
+        deleteButton.style.display = 'none';
+
+        const placeholder = document.createElement('li');
+        placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+        placeholder.textContent = 'Drag individual Conditions here';
+        membersListUL.appendChild(placeholder);
+    }
+    // Ensure listeners are attached if items were added not via addConditionToEditorList
+    // However, addConditionToEditorList already calls attachConditionGroupEditorMemberListeners.
+    // If the list is populated with placeholders (which don't have remove buttons),
+    // this call is not strictly necessary for them.
+    // For simplicity and robustness, ensuring it's called once after any potential modification
+    // to membersListUL can be good, but let's rely on addConditionToEditorList for now.
+    // If we add items to membersListUL directly without addConditionToEditorList, then we'd need it here.
+    // attachConditionGroupEditorMemberListeners(); // Potentially redundant if all items go through addConditionToEditorList
+}
+
+
+function hideConditionGroupEditor() {
+    const editorDiv = document.getElementById('condition-group-editor');
+    const listDiv = document.getElementById('condition-groups-list');
+    const membersListUL = document.getElementById('editable-condition-group-members');
+
+    if (!editorDiv || !listDiv || !membersListUL) {
+        console.error("Missing editor elements for hiding!");
+        return;
+    }
+
+    // Hide the editor and show the list
+    editorDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+
+    // Reset editor state
+    membersListUL.innerHTML = ''; // Clear members list
+    currentEditingConditionGroupNum = 0; // Reset editing state
+    // Optionally reset title and logic toggle if needed, but they'll be set on next show
+}
+
+function addConditionToEditorList(condition) {
+    const membersListUL = document.getElementById('editable-condition-group-members');
+    if (!membersListUL) {
+        console.error("Editor members list UL ('editable-condition-group-members') not found.");
+        return null;
+    }
+
+    // Check if this condition is already in the editor's list to prevent duplicates
+    const existingMember = membersListUL.querySelector(`li[data-con-num="${condition.cn}"]`);
+    if (existingMember) {
+        console.log(`Condition C${condition.cn} is already in the group editor.`);
+        // Optionally provide feedback to the user, e.g., highlight the existing item
+        existingMember.classList.add('bg-warning-subtle'); // Bootstrap 5 subtle warning
+        setTimeout(() => existingMember.classList.remove('bg-warning-subtle'), 1500);
+        return null; // Indicate it was already there or couldn't be added
+    }
+
+    // Create the list item (similar to displayConditions but with remove button)
+    const memberLi = document.createElement('li');
+    memberLi.className = 'list-group-item py-1 px-2 d-flex justify-content-between align-items-center small condition-group-editor-member';
+    memberLi.dataset.conNum = condition.cn; // Store conNum for saving, reordering, and removal
+
+    // Find target IO and get badge details (reusing existing logic from displayConditions)
+    const targetIo = currentConfig.ioVariables.find(io => io.t === condition.t && io.n === condition.tn);
+    const targetIoName = targetIo ? targetIo.nm : `IO ${condition.tn}`;
+    const targetIoTypeStr = dataTypesMap[condition.t] || `Type ${condition.t}`;
+    const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${condition.tn}: ${targetIo.nm}` : `Unknown IO (Type ${condition.t}, Num ${condition.tn})`;
+
+    const badge1 = getConditionBadge1(condition.cp);
+    const badge2 = getConditionBadge2(condition.cp);
+    const badge3 = getConditionBadge3(condition.cp, condition.v);
+
+    memberLi.innerHTML = `
+        <div class="flex-grow-1 me-2">
+            <span class="condition-number fw-bold me-1">C${condition.cn}</span>
+            <span class="condition-target-name text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</span>
+            <div class="condition-badges d-inline-block ms-1">
+                <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-outline-danger py-0 px-1 delete-member-btn" title="Remove C${condition.cn} from group">
+            &times;
+        </button>
+    `;
+
+    // If it's the first item, clear any placeholder text (like "Drag individual Conditions here")
+    const placeholder = membersListUL.querySelector('.text-muted.text-center');
+    if (placeholder) {
+        placeholder.remove();
+    }
+
+    membersListUL.appendChild(memberLi);
+    console.log(`Added Condition C${condition.cn} to the group editor list.`);
+
+    // Attach listener to the new remove button (and any existing ones)
+    attachConditionGroupEditorMemberListeners();
+
+    return memberLi; // Return the added element, might be useful
+}
+
+// --- NEW: Attach listeners to the remove buttons within the editor's member list ---
+function attachConditionGroupEditorMemberListeners() {
+    const membersListUL = document.getElementById('editable-condition-group-members');
+    if (!membersListUL) return;
+
+    membersListUL.querySelectorAll('.delete-member-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates if this function is called multiple times
+        button.removeEventListener('click', handleRemoveConditionGroupMember);
+        // Add the listener
+        button.addEventListener('click', handleRemoveConditionGroupMember);
+    });
+}
+
+// --- NEW: Handler for clicking the remove button on a member in the editor list ---
+function handleRemoveConditionGroupMember(event) {
+    const button = event.currentTarget;
+    const listItem = button.closest('li.condition-group-editor-member'); // Get the parent list item
+
+    if (listItem) {
+        const conNum = parseInt(listItem.dataset.conNum, 10);
+        console.log(`Removing Condition C${conNum} from editor list.`);
+        listItem.remove(); // Remove the list item from the DOM
+
+        // Optional: If the list becomes empty, add the placeholder back
+        const membersListUL = document.getElementById('editable-condition-group-members');
+        if (membersListUL && membersListUL.children.length === 0) {
+            const placeholder = document.createElement('li');
+            placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+            placeholder.textContent = 'Drag individual Conditions here';
+            membersListUL.appendChild(placeholder);
+        }
+    } else {
+        console.warn("Could not find list item to remove for button:", button);
+    }
+}
+
+// --- NEW: Handler for saving a Condition Group ---
+function handleSaveConditionGroup() {
+    console.log("Save Condition Group button clicked.");
+
+    const logicToggle = document.getElementById('conditionGroupLogicToggle');
+    const membersListUL = document.getElementById('editable-condition-group-members');
+
+    if (!logicToggle || !membersListUL) {
+        console.error("Missing elements for saving condition group!");
+        alert("Error: Could not save condition group. Editor elements missing.");
+        return;
+    }
+
+    // 1. Get the logic (0 for AND, 1 for OR)
+    const groupLogic = logicToggle.checked ? 1 : 0; // 1 if checked (OR), 0 if not (AND)
+
+    // 2. Get the member condition numbers
+    const memberConditionNumbers = [];
+    membersListUL.querySelectorAll('li.condition-group-editor-member').forEach(li => {
+        if (li.dataset.conNum) { // Ensure it's a member item, not a placeholder
+            memberConditionNumbers.push(parseInt(li.dataset.conNum, 10));
+        }
+    });
+
+    if (memberConditionNumbers.length === 0) {
+        alert("Cannot save an empty condition group. Please add at least one condition or cancel.");
+        return;
+    }
+    if (memberConditionNumbers.length > 10) { // MAX_CONDITIONS_PER_GROUP is 10
+        alert(`Cannot save group with more than 10 conditions. You have ${memberConditionNumbers.length}.`);
+        return;
+    }
+
+    // Prepare the conditionArray for the C++ struct (pad with 0s)
+    const finalConditionArray = new Array(10).fill(0); // MAX_CONDITIONS_PER_GROUP
+    for (let i = 0; i < memberConditionNumbers.length; i++) {
+        finalConditionArray[i] = memberConditionNumbers[i];
+    }
+
+    let groupToUpdate = null;
+
+    if (currentEditingConditionGroupNum > 0) {
+        // --- Editing an existing group ---
+        groupToUpdate = currentConfig.conditionGroups.find(cg => cg.n === currentEditingConditionGroupNum);
+        if (!groupToUpdate) {
+            console.error(`Could not find Condition Group CG${currentEditingConditionGroupNum} to update.`);
+            alert(`Error: Condition Group CG${currentEditingConditionGroupNum} not found for saving.`);
+            return;
+        }
+        console.log(`Updating existing Condition Group CG${currentEditingConditionGroupNum}`);
+    } else {
+        // --- Creating a new group ---
+        // Find the first inactive group slot
+        let newGroupIndex = -1;
+        for (let i = 0; i < currentConfig.conditionGroups.length; i++) {
+            if (!currentConfig.conditionGroups[i].s) { // 's' is status
+                newGroupIndex = i;
+                break;
+            }
+        }
+
+        if (newGroupIndex === -1) {
+            alert("Error: Maximum number of Condition Groups reached. Cannot create a new one.");
+            // TODO: Consider if MAX_CONDITION_GROUPS should be dynamically handled or if this is a hard limit.
+            return;
+        }
+        groupToUpdate = currentConfig.conditionGroups[newGroupIndex];
+        currentEditingConditionGroupNum = groupToUpdate.n; // Set for console log and consistency
+        console.log(`Creating new Condition Group in slot CG${groupToUpdate.n}`);
+    }
+
+    // Update the group object in currentConfig
+    groupToUpdate.l = groupLogic; // 'l' for Logic
+    // Copy elements to ensure fixed size is respected, matching the 'ca' key from JSON.
+    for (let i = 0; i < 10; i++) { // MAX_CONDITIONS_PER_GROUP
+        groupToUpdate.ca[i] = finalConditionArray[i]; // Use .ca for the JavaScript object
+    }
+    groupToUpdate.s = true; // Set status to active
+
+    console.log(`Saved Condition Group CG${groupToUpdate.n}:`, groupToUpdate);
+
+    // Hide the editor
+    hideConditionGroupEditor();
+
+    // Refresh the display of condition groups
+    displayConditionGroups();
+
+    // Reset currentEditingConditionGroupNum (already done in hideConditionGroupEditor)
+}
+
+// --- Placeholder for displaying Action Groups ---
+function displayActionGroups() {
+    const listElement = document.getElementById('action-groups-list');
+    if (!listElement) {
+        console.error("Action Groups list element not found!");
+        return;
+    }
+    listElement.innerHTML = '<li class="list-group-item text-muted small">Action Groups display coming soon.</li>'; // Placeholder content
+
+    if (!currentConfig.actionGroups || !Array.isArray(currentConfig.actionGroups)) {
+        console.warn("Action Groups data is missing or not an array.");
+        return;
+    }
+    // TODO: Implement full display logic for action groups later
+    console.log("displayActionGroups function called - placeholder.");
+}
+
 
 
 // --- Event Listeners ---
@@ -1857,5 +2410,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (deleteActionButton) {
         deleteActionButton.addEventListener('click', handleDeleteAction); // Attach the delete handler
     }
-});
+    const createConditionGroupBtn = document.getElementById('createConditionGroupBtn');
+    if (createConditionGroupBtn) {
+        createConditionGroupBtn.addEventListener('click', handleCreateConditionGroupClick);
+    }
+    const cancelConditionGroupEditBtn = document.getElementById('cancelConditionGroupEditBtn');
+    if (cancelConditionGroupEditBtn) {
+        cancelConditionGroupEditBtn.addEventListener('click', hideConditionGroupEditor);
+    }
 
+    // --- NEW: Attach listener for the Save button in the Condition Group editor ---
+    const saveConditionGroupBtn = document.getElementById('saveConditionGroupBtn');
+    if (saveConditionGroupBtn) {
+        saveConditionGroupBtn.addEventListener('click', handleSaveConditionGroup);
+    }
+});

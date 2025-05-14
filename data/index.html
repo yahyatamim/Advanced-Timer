@@ -166,10 +166,74 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header">
                         <h5 class="mb-0">Group</h5>
+                        <!-- Removed card-body to allow full height for sections -->
                     </div>
-                    <div class="card-body scrollable-column-content">
-                        <p class="text-muted">Drag Conditions/Actions here...</p>
-                        <!-- Add drop zones later -->
+                    <div class="scrollable-column-content p-2">
+                        <!-- Condition Groups Section -->
+                        <div id="condition-groups-section" class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 small">Condition Groups</h6>
+                                <button class="btn btn-sm btn-success py-0 px-2" id="createConditionGroupBtn"
+                                    type="button">
+                                    + New Group
+                                </button>
+                            </div>
+                            <!-- Condition Group Editor (Initially Hidden) -->
+                            <div id="condition-group-editor" class="p-2 border rounded bg-light mb-2"
+                                style="display: none;">
+                                <h6 id="condition-editor-title" class="mb-2 small">New Condition Group</h6>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                        id="conditionGroupLogicToggle">
+                                    <label class="form-check-label small" for="conditionGroupLogicToggle">Logic: OR
+                                        (Any)
+                                        / AND (All)</label>
+                                </div>
+                                <p class="small text-muted mb-1">Members:</p>
+                                <ul id="editable-condition-group-members" class="list-group list-group-flush small mb-2"
+                                    style="min-height: 50px;">
+                                    <!-- Draggable/Sortable members will appear here -->
+                                </ul>
+                                <div id="condition-group-drop-zone" class="border p-2 mb-2 text-muted text-center small"
+                                    style="background-color: #fdf6ff;">
+                                    Drag individual Conditions here
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-danger me-2 py-0 px-2"
+                                        id="cancelConditionGroupEditBtn">❌ Cancel</button>
+                                    <button class="btn btn-sm btn-danger me-2 py-0 px-2" id="deleteConditionGroupBtn"
+                                        style="display: none;">
+                                        🗑️ Delete Group
+                                    </button>
+                                    <button class="btn btn-sm btn-primary py-0 px-2" id="saveConditionGroupBtn">✔️
+                                        Save</button>
+                                </div>
+                            </div>
+                            <ul id="condition-groups-list" class="list-group list-group-flush small">
+                                <!-- Existing condition groups will be populated here by JS -->
+                            </ul>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- Action Groups Section -->
+                        <div id="action-groups-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 small">Action Groups</h6>
+                                <button class="btn btn-sm btn-success py-0 px-2" id="createActionGroupBtn"
+                                    type="button">
+                                    + New Group
+                                </button>
+                            </div>
+                            <!-- Action Group Editor (Placeholder - to be detailed if time permits) -->
+                            <div id="action-group-editor" class="p-2 border rounded bg-light mb-2"
+                                style="display: none;">
+                                <p class="text-muted small">Action Group Editor (Coming Soon)</p>
+                            </div>
+                            <ul id="action-groups-list" class="list-group list-group-flush small">
+                                <!-- Existing action groups will be populated here by JS -->
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
