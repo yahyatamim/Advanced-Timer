@@ -1838,7 +1838,7 @@ function displayConditionGroups() {
             listItem.dataset.groupNum = group.n;
 
             // Determine Logic Badge
-            const logicText = group.l === 0 ? 'AND' : 'OR'; // 0: andLogic, 1: orLogic
+            const logicText = group.l === 0 ? 'All' : 'Any'; // 0: andLogic (All), 1: orLogic (Any)
             const logicClass = group.l === 0 ? 'bg-success' : 'bg-warning text-dark'; // Green for AND, Yellow for OR
             const logicTitle = group.l === 0 ? 'All conditions must be true' : 'Any condition can be true';
 
@@ -1863,7 +1863,7 @@ function displayConditionGroups() {
                                 aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
                             <span class="collapse-icon">►</span> <!-- Default to collapsed icon -->
                         </button>
-                        <!-- Edit Button -->
+                                                <!-- Edit Button -->
                         <button class="btn btn-sm btn-outline-secondary edit-group-btn fs-6 p-1" title="Edit Condition Group CG${group.n}"
                                 data-group-type="Condition" data-group-num="${group.n}">
                             ⚙️
@@ -1945,16 +1945,12 @@ function attachConditionGroupListeners() {
         const collapseElement = document.getElementById(button.dataset.bsTarget.substring(1)); // Get the target collapse element
         if (collapseElement) {
             // Remove existing listeners to prevent duplicates
-            button.removeEventListener('click', handleCollapseToggleIcon); // Use a specific handler name
             collapseElement.removeEventListener('show.bs.collapse', handleCollapseShow);
             collapseElement.removeEventListener('hide.bs.collapse', handleCollapseHide);
 
             // Add new listeners
-            // The click listener is primarily for Bootstrap, but we can add our own if needed for complex logic
-            // For simple icon toggle, Bootstrap's events are better.
-            button.addEventListener('click', handleCollapseToggleIcon); // Add a click listener to the button itself
-
             // Listen to Bootstrap's collapse events
+            // These events are more reliable for icon updates as they fire after Bootstrap's state change.
             collapseElement.addEventListener('show.bs.collapse', handleCollapseShow);
             collapseElement.addEventListener('hide.bs.collapse', handleCollapseHide);
 
@@ -1976,18 +1972,6 @@ function attachConditionGroupListeners() {
         // Add the listener
         button.addEventListener('click', handleEditGroupClick);
     });
-}
-
-function handleCollapseToggleIcon(event) {
-    // This handler is simple; Bootstrap does the heavy lifting.
-    // We just need to make sure the icon updates *after* Bootstrap toggles the state.
-    // The show.bs.collapse and hide.bs.collapse events are better for reliable icon updates.
-    // This click handler is mostly a fallback or for immediate visual feedback before the transition.
-    const button = event.currentTarget;
-    const iconSpan = button.querySelector('.collapse-icon');
-    // Toggle icon based on current state *before* Bootstrap's toggle might finish
-    // A slight delay or listening to the Bootstrap events is more robust.
-    // Let's rely on the Bootstrap event handlers below for accuracy.
 }
 
 function handleCollapseShow(event) {
@@ -2041,12 +2025,12 @@ function handleCreateConditionGroupClick() {
 function showConditionGroupEditor(groupData = null) {
     const editorDiv = document.getElementById('condition-group-editor');
     const listDiv = document.getElementById('condition-groups-list'); // The list of groups
-    const editorTitle = document.getElementById('condition-editor-title');
+    // const editorTitle = document.getElementById('condition-editor-title'); // No longer used directly
     const logicToggle = document.getElementById('conditionGroupLogicToggle');
     const membersListUL = document.getElementById('editable-condition-group-members');
     const deleteButton = document.getElementById('deleteConditionGroupBtn');
 
-    if (!editorDiv || !listDiv || !editorTitle || !logicToggle || !membersListUL || !deleteButton) {
+    if (!editorDiv || !listDiv || !logicToggle || !membersListUL || !deleteButton) {
         console.error("Missing editor elements for showConditionGroupEditor!");
         return;
     }
@@ -2062,7 +2046,6 @@ function showConditionGroupEditor(groupData = null) {
         // --- Populate for Editing Existing Group ---
         console.log(`Populating editor for Condition Group CG${groupData.n}`);
         currentEditingConditionGroupNum = groupData.n;
-        editorTitle.textContent = `Edit Condition Group CG${groupData.n}`;
         logicToggle.checked = groupData.l === 1; // 1 for OR, 0 for AND
         deleteButton.style.display = 'inline-block';
 
@@ -2094,7 +2077,6 @@ function showConditionGroupEditor(groupData = null) {
         // --- Populate for Creating New Group ---
         console.log("Populating editor for New Condition Group");
         currentEditingConditionGroupNum = 0;
-        editorTitle.textContent = 'New Condition Group';
         logicToggle.checked = false; // Default to AND logic (0)
         deleteButton.style.display = 'none';
 

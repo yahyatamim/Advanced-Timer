@@ -181,15 +181,31 @@
                             <!-- Condition Group Editor (Initially Hidden) -->
                             <div id="condition-group-editor" class="p-2 border rounded bg-light mb-2"
                                 style="display: none;">
-                                <h6 id="condition-editor-title" class="mb-2 small">New Condition Group</h6>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                        id="conditionGroupLogicToggle">
-                                    <label class="form-check-label small" for="conditionGroupLogicToggle">Logic: OR
-                                        (Any)
-                                        / AND (All)</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+
+                                    <!-- Center: Logic Toggle -->
+                                    <div class="d-flex align-items-center">
+                                        <span class="small">All</span>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                id="conditionGroupLogicToggle">
+                                            <label class="form-check-label" for="conditionGroupLogicToggle"></label>
+                                            <!-- Empty label -->
+                                        </div>
+                                        <span class="small">Any</span>
+                                    </div>
+
+                                    <!-- Right: Action Buttons -->
+                                    <div class="d-flex">
+                                        <button class="btn btn-sm btn-danger me-1 py-0 px-2"
+                                            id="cancelConditionGroupEditBtn" title="Cancel">❌</button>
+                                        <button class="btn btn-sm btn-danger me-1 py-0 px-2"
+                                            id="deleteConditionGroupBtn" title="Delete Group"
+                                            style="display: none;">🗑️</button>
+                                        <button class="btn btn-sm btn-primary py-0 px-2" id="saveConditionGroupBtn"
+                                            title="Save">✔️</button>
+                                    </div>
                                 </div>
-                                <p class="small text-muted mb-1">Members:</p>
                                 <ul id="editable-condition-group-members" class="list-group list-group-flush small mb-2"
                                     style="min-height: 50px;">
                                     <!-- Draggable/Sortable members will appear here -->
@@ -197,16 +213,6 @@
                                 <div id="condition-group-drop-zone" class="border p-2 mb-2 text-muted text-center small"
                                     style="background-color: #fdf6ff;">
                                     Drag individual Conditions here
-                                </div>
-                                <div class="d-flex justify-content-end">
-                                    <button class="btn btn-sm btn-danger me-2 py-0 px-2"
-                                        id="cancelConditionGroupEditBtn">❌ Cancel</button>
-                                    <button class="btn btn-sm btn-danger me-2 py-0 px-2" id="deleteConditionGroupBtn"
-                                        style="display: none;">
-                                        🗑️ Delete Group
-                                    </button>
-                                    <button class="btn btn-sm btn-primary py-0 px-2" id="saveConditionGroupBtn">✔️
-                                        Save</button>
                                 </div>
                             </div>
                             <ul id="condition-groups-list" class="list-group list-group-flush small">

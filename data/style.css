@@ -346,5 +346,12 @@ footer {
     background-color: #f8d7da; /* Light red background on hover */
     color: #842029; /* Darker red text on hover */
 }
-/* --- End Action Item Styling --- */
 
+.condition-group-number {
+    color: #6c757d;
+}
+
+.edit-group-btn {
+    border: none;
+}
+/* --- End Action Item Styling --- */
