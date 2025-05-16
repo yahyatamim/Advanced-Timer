@@ -3018,6 +3018,48 @@ function showRuleEditor(ruleData = null) {
         currentEditingRuleNum = ruleData.n;
         editingRuleNumInput.value = ruleData.n;
         deleteButton.style.display = 'inline-block';
+
+        // Populate IF slot
+        if (ruleData.cg) { // Use Condition Group
+            const group = currentConfig.conditionGroups.find(cg => cg.n === ruleData.ci && cg.s);
+            if (group) {
+                ifSlot.innerHTML = `<div class="p-2"><span class="fw-bold">CG${group.n}</span>: ${group.l === 0 ? 'All' : 'Any'} of its members</div>`;
+                ifSlot.dataset.sourceType = 'ConditionGroup';
+                ifSlot.dataset.sourceId = group.n;
+            } else {
+                ifSlot.innerHTML = `<span class="text-danger small">Error: CG${ruleData.ci} not found or inactive.</span>`;
+            }
+        } else { // Use individual Condition
+            const condition = currentConfig.conditions.find(c => c.cn === ruleData.ci && c.s);
+            if (condition) {
+                ifSlot.innerHTML = renderConditionItemVisualForRule(condition, false);
+                ifSlot.dataset.sourceType = 'Condition';
+                ifSlot.dataset.sourceId = condition.cn;
+            } else {
+                ifSlot.innerHTML = `<span class="text-danger small">Error: C${ruleData.ci} not found or inactive.</span>`;
+            }
+        }
+
+        // Populate THEN slot
+        if (ruleData.ag) { // Use Action Group
+            const group = currentConfig.actionGroups.find(ag => ag.n === ruleData.ai && ag.s);
+            if (group) {
+                thenSlot.innerHTML = `<div class="p-2"><span class="fw-bold">AG${group.n}</span>: Executes its actions</div>`;
+                thenSlot.dataset.targetType = 'ActionGroup';
+                thenSlot.dataset.targetId = group.n;
+            } else {
+                thenSlot.innerHTML = `<span class="text-danger small">Error: AG${ruleData.ai} not found or inactive.</span>`;
+            }
+        } else { // Use individual Action
+            const action = currentConfig.actions.find(a => a.an === ruleData.ai && a.s);
+            if (action) {
+                thenSlot.innerHTML = renderActionItemVisualForRule(action, false);
+                thenSlot.dataset.targetType = 'Action';
+                thenSlot.dataset.targetId = action.an;
+            } else {
+                thenSlot.innerHTML = `<span class="text-danger small">Error: A${ruleData.ai} not found or inactive.</span>`;
+            }
+        }
     } else {
         editorTitle.textContent = 'Create New Rule';
         console.log("Populating editor for New Rule");
@@ -3065,6 +3107,107 @@ function hideRuleEditor() {
     thenSlot.dataset.targetName = '';
 }
 
+function handleSaveRule() {
+    const ifSlot = document.getElementById('rule-editor-if-slot');
+    const thenSlot = document.getElementById('rule-editor-then-slot');
+    const editingRuleNumInput = document.getElementById('editingRuleNum');
+    const ruleNumToSave = parseInt(editingRuleNumInput.value, 10);
+
+    const sourceType = ifSlot.dataset.sourceType;
+    const sourceId = parseInt(ifSlot.dataset.sourceId, 10);
+    const targetType = thenSlot.dataset.targetType;
+    const targetId = parseInt(thenSlot.dataset.targetId, 10);
+
+    // --- Basic Validation ---
+    if (!sourceType || isNaN(sourceId) || sourceId <= 0) {
+        alert("Please drag a Condition or Condition Group into the 'IF' slot.");
+        return;
+    }
+    if (!targetType || isNaN(targetId) || targetId <= 0) {
+        alert("Please drag an Action or Action Group into the 'THEN' slot.");
+        return;
+    }
+
+    let ruleToUpdate = null;
+
+    if (ruleNumToSave > 0) { // Editing existing rule
+        ruleToUpdate = currentConfig.rules.find(r => r.n === ruleNumToSave);
+        if (!ruleToUpdate) {
+            alert(`Error: Could not find Rule R${ruleNumToSave} to update.`);
+            console.error(`Save failed: Rule R${ruleNumToSave} not found in currentConfig.`);
+            return;
+        }
+        console.log(`Updating existing Rule R${ruleNumToSave}`);
+    } else { // Creating new rule
+        // Find the first inactive rule slot
+        let newRuleIndex = -1;
+        for (let i = 0; i < currentConfig.rules.length; i++) {
+            if (!currentConfig.rules[i].s) { // 's' is status
+                newRuleIndex = i;
+                break;
+            }
+        }
+
+        if (newRuleIndex === -1) {
+            alert("Error: Maximum number of rules reached. Cannot create a new one.");
+            return;
+        }
+        ruleToUpdate = currentConfig.rules[newRuleIndex];
+        console.log(`Creating new Rule in slot R${ruleToUpdate.n}`);
+    }
+
+    // Update the rule object in currentConfig
+    ruleToUpdate.cg = (sourceType === 'ConditionGroup'); // useConditionGroup
+    ruleToUpdate.ci = sourceId;                         // conditionSourceId
+    ruleToUpdate.ag = (targetType === 'ActionGroup');   // useActionGroup
+    ruleToUpdate.ai = targetId;                         // actionTargetId
+    ruleToUpdate.s = true;                              // Set status to active
+
+    console.log(`Saved Rule R${ruleToUpdate.n}:`, JSON.parse(JSON.stringify(ruleToUpdate))); // Log a deep copy
+
+    // Hide the editor and refresh the display
+    hideRuleEditor();
+    displayRules();
+
+    // Reset currentEditingRuleNum (already done in hideRuleEditor)
+}
+
+function handleDeleteRule() {
+    const editingRuleNumInput = document.getElementById('editingRuleNum');
+    const ruleNumToDelete = parseInt(editingRuleNumInput.value, 10);
+
+    if (ruleNumToDelete <= 0) {
+        alert("Error: No rule selected for deletion or invalid rule number.");
+        console.error("handleDeleteRule called with invalid rule number:", ruleNumToDelete);
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete Rule R${ruleNumToDelete}? This will mark it as inactive.`)) {
+        const rule = currentConfig.rules.find(r => r.n === ruleNumToDelete);
+
+        if (rule) {
+            rule.s = false; // Mark as inactive
+            // Optionally, reset other fields to their default inactive state
+            rule.cg = false;
+            rule.ci = 0;
+            rule.ag = false;
+            rule.ai = 0;
+
+            console.log(`Marked Rule R${ruleNumToDelete} as inactive.`);
+
+            hideRuleEditor();
+            displayRules(); // Refresh the list
+        } else {
+            alert(`Error: Could not find Rule R${ruleNumToDelete} to delete.`);
+            console.error(`Delete failed: Rule R${ruleNumToDelete} not found in currentConfig.`);
+        }
+    }
+    // If user cancels, currentEditingRuleNum remains, and editor stays open.
+    // hideRuleEditor() is only called on successful deletion.
+}
+
+
+
 function attachEditRuleListeners() {
     document.querySelectorAll('.edit-rule-btn').forEach(button => {
         button.removeEventListener('click', handleEditRuleClick); // Prevent duplicates
@@ -3086,6 +3229,7 @@ function handleEditRuleClick(event) {
     }
 }
 
+
 // Drag and Drop Section
 
 function initializeDragAndDrop() {
@@ -3095,6 +3239,9 @@ function initializeDragAndDrop() {
     const softioList = document.getElementById('softio-list');
     const timersList = document.getElementById('timers-list');
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
+    // Rule Editor Slots
+    const ruleEditorIfSlot = document.getElementById('rule-editor-if-slot'); // Already have this
+    const ruleEditorThenSlot = document.getElementById('rule-editor-then-slot'); // <-- ADD THIS
     const conditionsList = document.getElementById('conditions-list'); // The source list of all conditions
     const conditionGroupEditorDropZone = document.getElementById('condition-group-drop-zone');
     const editableConditionGroupMembersUL = document.getElementById('editable-condition-group-members');
@@ -3109,7 +3256,7 @@ function initializeDragAndDrop() {
 
     if (!diList || !doList || !aiList || !softioList || !timersList ||
         !conditionsDropZone || !actionsDropZone || !conditionsList || !conditionGroupEditorDropZone || !editableConditionGroupMembersUL ||
-        !actionsList || !actionGroupEditorDropZone || !editableActionGroupMembersUL) { // <-- UPDATED CHECK
+        !actionsList || !actionGroupEditorDropZone || !editableActionGroupMembersUL || !ruleEditorIfSlot || !ruleEditorThenSlot) { // <-- UPDATED CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -3215,10 +3362,10 @@ function initializeDragAndDrop() {
         }
     });
 
-    new Sortable(conditionsList, {
+    Sortable.create(conditionsList, { // Changed to Sortable.create for consistency, new Sortable also works
         group: {
-            name: 'conditions-to-group', // A new group name for this interaction
-            pull: 'clone', // Clone the item when dragging
+            name: 'draggable-conditions', // MODIFIED group name
+            pull: 'clone',
             put: false     // Cannot drop items into this list from elsewhere
         },
         animation: 150,
@@ -3228,8 +3375,8 @@ function initializeDragAndDrop() {
     // --- NEW: Make the Condition Group Editor's drop zone a target ---
     new Sortable(conditionGroupEditorDropZone, {
         group: {
-            name: 'conditions-to-group', // Must match the source list's group name
-            pull: false, // Cannot drag items out of this drop zone
+            name: 'draggable-conditions', // MODIFIED to match new source group name
+            pull: false,
             put: true    // Allows items to be dropped into this zone
         },
         animation: 150,
@@ -3272,11 +3419,71 @@ function initializeDragAndDrop() {
         // onEnd: function (evt) { /* Logic to update order for saving, if needed immediately */ }
     });
 
+    // --- Make condition-groups-list draggable (as a source for rules) ---
+    const conditionGroupsList = document.getElementById('condition-groups-list');
+    if (conditionGroupsList) {
+        Sortable.create(conditionGroupsList, {
+            group: {
+                name: 'draggable-condition-groups', // New group name for condition groups
+                pull: 'clone',
+                put: false
+            },
+            animation: 150,
+            sort: false // This list itself is not for reordering its items by drag *yet*
+            // Reordering of groups will be a separate Sortable instance on this list later.
+        });
+    }
+
+    // --- Make rule-editor-if-slot a target for conditions and condition groups ---
+    if (ruleEditorIfSlot) {
+        Sortable.create(ruleEditorIfSlot, {
+            group: {
+                name: 'rule-editor-if-target', // Unique group name for this target slot
+                pull: false,
+                put: ['draggable-conditions', 'draggable-condition-groups'] // Accepts from these two groups
+            },
+            animation: 150,
+            sort: false, // Not for sorting items within the slot
+            onAdd: function (evt) {
+                const itemEl = evt.item; // The dragged (cloned) item
+                const ifSlot = evt.to;   // The target slot (rule-editor-if-slot)
+
+                // Determine if it's a condition or a condition group
+                if (itemEl.classList.contains('condition-item')) { // Individual condition
+                    const conNum = parseInt(itemEl.dataset.conNum, 10);
+                    const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s);
+                    if (condition) {
+                        ifSlot.innerHTML = renderConditionItemVisualForRule(condition, false); // Use helper
+                        ifSlot.dataset.sourceType = 'Condition';
+                        ifSlot.dataset.sourceId = conNum;
+                        console.log(`Dropped Condition C${conNum} into IF slot.`);
+                    } else {
+                        ifSlot.innerHTML = `<span class="text-danger small">Error: C${conNum} not found or inactive.</span>`;
+                    }
+                } else if (itemEl.classList.contains('condition-group-item')) { // Condition group
+                    const groupNum = parseInt(itemEl.dataset.groupNum, 10);
+                    const group = currentConfig.conditionGroups.find(cg => cg.n === groupNum && cg.s);
+                    if (group) {
+                        // For groups, just show a simple text representation in the slot for now
+                        // The full visual is already complex and might be too much for the small slot.
+                        // We can enhance this later if needed.
+                        ifSlot.innerHTML = `<div class="p-2"><span class="fw-bold">CG${groupNum}</span>: ${group.l === 0 ? 'All' : 'Any'} of its members</div>`;
+                        ifSlot.dataset.sourceType = 'ConditionGroup';
+                        ifSlot.dataset.sourceId = groupNum;
+                        console.log(`Dropped Condition Group CG${groupNum} into IF slot.`);
+                    } else {
+                        ifSlot.innerHTML = `<span class="text-danger small">Error: CG${groupNum} not found or inactive.</span>`;
+                    }
+                }
+                itemEl.remove(); // Remove the clone from the DOM
+            }
+        });
+    }
     // --- NEW: Make the 'actions-list' (list of all available actions) draggable ---
-    new Sortable(actionsList, {
+    Sortable.create(actionsList, { // Changed to Sortable.create for consistency
         group: {
-            name: 'actions-to-group', // New group name for this interaction
-            pull: 'clone',            // Clone the item when dragging
+            name: 'draggable-actions', // MODIFIED group name
+            pull: 'clone',
             put: false                // Cannot drop items into this list from elsewhere
         },
         animation: 150,
@@ -3286,8 +3493,8 @@ function initializeDragAndDrop() {
     // --- NEW: Make the Action Group Editor's drop zone a target ---
     new Sortable(actionGroupEditorDropZone, {
         group: {
-            name: 'actions-to-group', // Must match the source list's group name
-            pull: false,              // Cannot drag items out of this drop zone
+            name: 'draggable-actions', // MODIFIED to match new source group name
+            pull: false,
             put: true                 // Allows items to be dropped into this zone
         },
         animation: 150,
@@ -3320,6 +3527,66 @@ function initializeDragAndDrop() {
         animation: 150,
         handle: '.action-group-editor-member' // We'll add this class to LIs
     });
+
+    // --- Make action-groups-list draggable (as a source for rules) ---
+    const actionGroupsList = document.getElementById('action-groups-list');
+    if (actionGroupsList) {
+        Sortable.create(actionGroupsList, {
+            group: {
+                name: 'draggable-action-groups', // New group name for action groups
+                pull: 'clone',
+                put: false
+            },
+            animation: 150,
+            sort: false // This list itself is not for reordering its items by drag *yet*
+        });
+    }
+
+    // --- Make rule-editor-then-slot a target for actions and action groups ---
+    if (ruleEditorThenSlot) {
+        Sortable.create(ruleEditorThenSlot, {
+            group: {
+                name: 'rule-editor-then-target', // Unique group name for this target slot
+                pull: false,
+                put: ['draggable-actions', 'draggable-action-groups'] // Accepts from these two groups
+            },
+            animation: 150,
+            sort: false, // Not for sorting items within the slot
+            onAdd: function (evt) {
+                const itemEl = evt.item; // The dragged (cloned) item
+                const thenSlot = evt.to; // The target slot (rule-editor-then-slot)
+
+                // Determine if it's an action or an action group
+                if (itemEl.classList.contains('action-item')) { // Individual action
+                    const actNum = parseInt(itemEl.dataset.actNum, 10);
+                    const action = currentConfig.actions.find(a => a.an === actNum && a.s);
+                    if (action) {
+                        thenSlot.innerHTML = renderActionItemVisualForRule(action, false); // Use helper
+                        thenSlot.dataset.targetType = 'Action'; // Note: using targetType for THEN slot
+                        thenSlot.dataset.targetId = actNum;
+                        console.log(`Dropped Action A${actNum} into THEN slot.`);
+                    } else {
+                        thenSlot.innerHTML = `<span class="text-danger small">Error: A${actNum} not found or inactive.</span>`;
+                    }
+                } else if (itemEl.classList.contains('action-group-item')) { // Action group
+                    const groupNum = parseInt(itemEl.dataset.groupNum, 10);
+                    const group = currentConfig.actionGroups.find(ag => ag.n === groupNum && ag.s);
+                    if (group) {
+                        // For groups, just show a simple text representation in the slot for now
+                        thenSlot.innerHTML = `<div class="p-2"><span class="fw-bold">AG${groupNum}</span>: Executes its actions</div>`;
+                        thenSlot.dataset.targetType = 'ActionGroup';
+                        thenSlot.dataset.targetId = groupNum;
+                        console.log(`Dropped Action Group AG${groupNum} into THEN slot.`);
+                    } else {
+                        thenSlot.innerHTML = `<span class="text-danger small">Error: AG${groupNum} not found or inactive.</span>`;
+                    }
+                }
+                itemEl.remove(); // Remove the clone from the DOM
+            }
+        });
+    }
+
+
 
     // Add initialization for other lists/zones later
 }
@@ -3448,16 +3715,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Placeholder for save and delete rule buttons
     const saveRuleBtn = document.getElementById('saveRuleBtn');
     if (saveRuleBtn) {
-        saveRuleBtn.addEventListener('click', () => {
-            alert("Save Rule functionality not yet implemented.");
-            // Later: handleSaveRule();
-        });
+        saveRuleBtn.addEventListener('click', handleSaveRule); // <-- MODIFIED
     }
     const deleteRuleBtn = document.getElementById('deleteRuleBtn');
     if (deleteRuleBtn) {
-        deleteRuleBtn.addEventListener('click', () => {
-            alert("Delete Rule functionality not yet implemented.");
-            // Later: handleDeleteRule();
-        });
+        deleteRuleBtn.addEventListener('click', handleDeleteRule); // <-- MODIFIED
     }
 });
