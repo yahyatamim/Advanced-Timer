@@ -16,7 +16,7 @@ struct deviceConfig {
   bool run;  // IF program runs or stop
 };
 
-deviceConfig defaultConfig = {"Desktop_tamim", "12345678", "AdvancedTimer",
+deviceConfig defaultConfig = {"advancedtimer", "12345678", "AdvancedTimer",
                               false};
 
 bool saveConfigToFile() {
