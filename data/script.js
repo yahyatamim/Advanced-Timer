@@ -4,6 +4,7 @@ let currentConfig = {};
 let ioVariableSortable = null; // To hold the Sortable instance
 
 let currentEditingConditionGroupNum = 0;
+let currentEditingActionGroupNum = 0; // For Action Group editor
 
 // --- Enum Maps (for display/lookup) ---
 // Should match enums in dataStructure.h
@@ -618,15 +619,21 @@ function initializeDragAndDrop() {
     const softioList = document.getElementById('softio-list');
     const timersList = document.getElementById('timers-list');
     const conditionsDropZone = document.getElementById('conditions-drop-zone');
-    const actionsDropZone = document.getElementById('actions-drop-zone');
     const conditionsList = document.getElementById('conditions-list'); // The source list of all conditions
     const conditionGroupEditorDropZone = document.getElementById('condition-group-drop-zone');
     const editableConditionGroupMembersUL = document.getElementById('editable-condition-group-members');
+
+    // --- New elements for Action Groups ---
+    const actionsList = document.getElementById('actions-list'); // Source list of all actions
+    const actionsDropZone = document.getElementById('actions-drop-zone'); // For creating individual actions
+    const actionGroupEditorDropZone = document.getElementById('action-group-drop-zone'); // For adding actions to a group
+    const editableActionGroupMembersUL = document.getElementById('editable-action-group-members'); // List within action group editor
+
     // Get other lists/zones later as needed
 
     if (!diList || !doList || !aiList || !softioList || !timersList ||
-        !conditionsDropZone || !actionsDropZone ||
-        !conditionsList || !conditionGroupEditorDropZone || !editableConditionGroupMembersUL) { // <-- UPDATED CHECK
+        !conditionsDropZone || !actionsDropZone || !conditionsList || !conditionGroupEditorDropZone || !editableConditionGroupMembersUL ||
+        !actionsList || !actionGroupEditorDropZone || !editableActionGroupMembersUL) { // <-- UPDATED CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -789,8 +796,56 @@ function initializeDragAndDrop() {
         // onEnd: function (evt) { /* Logic to update order for saving, if needed immediately */ }
     });
 
+    // --- NEW: Make the 'actions-list' (list of all available actions) draggable ---
+    new Sortable(actionsList, {
+        group: {
+            name: 'actions-to-group', // New group name for this interaction
+            pull: 'clone',            // Clone the item when dragging
+            put: false                // Cannot drop items into this list from elsewhere
+        },
+        animation: 150,
+        sort: false // Don't allow sorting within the main actions-list itself
+    });
+
+    // --- NEW: Make the Action Group Editor's drop zone a target ---
+    new Sortable(actionGroupEditorDropZone, {
+        group: {
+            name: 'actions-to-group', // Must match the source list's group name
+            pull: false,              // Cannot drag items out of this drop zone
+            put: true                 // Allows items to be dropped into this zone
+        },
+        animation: 150,
+        sort: false, // The drop zone itself is not for sorting
+        onAdd: function (evt) {
+            const itemEl = evt.item; // The dragged (cloned) action item
+            const actNum = parseInt(itemEl.dataset.actNum, 10);
+
+            itemEl.remove(); // Remove the visual clone
+
+            const editorDiv = document.getElementById('action-group-editor');
+            if (!editorDiv || editorDiv.style.display === 'none') {
+                console.warn("Action group editor is not visible. Drop ignored.");
+                return;
+            }
+
+            const actionData = currentConfig.actions.find(a => a.an === actNum && a.s);
+            if (actionData) {
+                addActionToEditorList(actionData); // Function to be created next
+            } else {
+                console.error(`Could not find active action data for A${actNum}.`);
+                alert(`Error: Could not find data for Action A${actNum}.`);
+            }
+        }
+    });
+
+    // --- NEW: Make the 'editable-action-group-members' UL sortable for reordering ---
+    new Sortable(editableActionGroupMembersUL, {
+        group: 'action-group-members-internal', // Unique group name
+        animation: 150,
+        handle: '.action-group-editor-member' // We'll add this class to LIs
+    });
+
     // Add initialization for other lists/zones later
-    console.log("Drag and drop initialized for IO Variables -> Conditions Drop Zone."); // Update log slightly
 }
 
 function populateConditionModal(ioVariable) {
@@ -2063,9 +2118,15 @@ function handleEditGroupClick(event) {
             alert(`Error: Condition Group CG${groupNum} not found or is inactive.`);
         }
     } else if (groupType === "Action") {
-        // Placeholder for Action Group editing
-        console.log(`Edit button clicked for Action Group AG${groupNum}`);
-        alert(`Editing Action Group AG${groupNum} - Editor coming soon!`);
+        // Find the action group data from currentConfig
+        const groupData = currentConfig.actionGroups.find(ag => ag.n === groupNum && ag.s);
+        if (groupData) {
+            console.log(`Editing Action Group AG${groupNum} with data:`, groupData);
+            showActionGroupEditor(groupData); // Pass the found group data
+        } else {
+            console.error(`Could not find active Action Group AG${groupNum} to edit.`);
+            alert(`Error: Action Group AG${groupNum} not found or is inactive.`);
+        }
     } else {
         console.warn(`Edit button clicked for unknown group type: ${groupType}`);
     }
@@ -2398,22 +2459,6 @@ function handleDeleteConditionGroup() {
     }
 }
 
-function displayActionGroups() {
-    const listElement = document.getElementById('action-groups-list');
-    if (!listElement) {
-        console.error("Action Groups list element not found!");
-        return;
-    }
-    listElement.innerHTML = '<li class="list-group-item text-muted small">Action Groups display coming soon.</li>'; // Placeholder content
-
-    if (!currentConfig.actionGroups || !Array.isArray(currentConfig.actionGroups)) {
-        console.warn("Action Groups data is missing or not an array.");
-        return;
-    }
-    // TODO: Implement full display logic for action groups later
-    console.log("displayActionGroups function called - placeholder.");
-}
-
 function setConditionGroupLogic(value, text) {
     const logicButton = document.getElementById('conditionGroupLogicButton');
     const logicValueInput = document.getElementById('conditionGroupLogicValue');
@@ -2423,6 +2468,500 @@ function setConditionGroupLogic(value, text) {
         console.log(`Condition Group Logic set to: ${text} (Value: ${value})`);
     }
 }
+
+// --- Action Group Editor Functions ---
+function handleCreateActionGroupClick() {
+    console.log("Create Action Group button clicked.");
+    showActionGroupEditor(); // Call the function to show the editor in "new" mode
+}
+
+function showActionGroupEditor(groupData = null) {
+    const editorDiv = document.getElementById('action-group-editor');
+    const listDiv = document.getElementById('action-groups-list'); // The list of groups
+    const membersListUL = document.getElementById('editable-action-group-members');
+    const deleteButton = document.getElementById('deleteActionGroupBtn');
+    const saveButton = document.getElementById('saveActionGroupBtn');
+
+    if (!editorDiv || !listDiv || !membersListUL || !deleteButton || !saveButton) {
+        console.error("Missing editor elements for showActionGroupEditor!");
+        return;
+    }
+
+    // Hide the list and show the editor
+    listDiv.style.display = 'none';
+    editorDiv.style.display = 'block';
+
+    // Clear previous members from the editor list
+    membersListUL.innerHTML = '';
+
+    if (groupData) {
+        // --- Populate for Editing Existing Group ---
+        console.log(`Populating editor for Action Group AG${groupData.n}`);
+        currentEditingActionGroupNum = groupData.n;
+        deleteButton.style.display = 'inline-block';
+        saveButton.textContent = 'Update Group'; // Or use an icon/title
+
+        // Populate members (using groupData.ar for action array)
+        const activeMembersInGroup = groupData.ar.filter(actNum => actNum > 0);
+        if (activeMembersInGroup.length > 0) {
+            activeMembersInGroup.forEach(actNum => {
+                const action = currentConfig.actions.find(a => a.an === actNum && a.s);
+                if (action) {
+                    addActionToEditorList(action); // This function adds to UL
+                } else {
+                    const memberLi = document.createElement('li');
+                    memberLi.className = 'list-group-item py-1 px-2 d-flex align-items-center small text-danger';
+                    memberLi.textContent = `A${actNum} (Not Found/Inactive)`;
+                    membersListUL.appendChild(memberLi);
+                }
+            });
+        } else {
+            const placeholder = document.createElement('li');
+            placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+            placeholder.textContent = 'Drag individual Actions here';
+            membersListUL.appendChild(placeholder);
+        }
+        attachActionGroupEditorMemberListeners(); 
+
+    } else {
+        // --- Populate for Creating New Group ---
+        console.log("Populating editor for New Action Group");
+        currentEditingActionGroupNum = 0;
+        deleteButton.style.display = 'none';
+        saveButton.textContent = 'Save Group'; // Or use an icon/title
+
+        const placeholder = document.createElement('li');
+        placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+        placeholder.textContent = 'Drag individual Actions here';
+        membersListUL.appendChild(placeholder);
+    }
+}
+
+function hideActionGroupEditor() {
+    const editorDiv = document.getElementById('action-group-editor');
+    const listDiv = document.getElementById('action-groups-list');
+    const membersListUL = document.getElementById('editable-action-group-members');
+
+    if (!editorDiv || !listDiv || !membersListUL) {
+        console.error("Missing editor elements for hiding action group editor!");
+        return;
+    }
+
+    editorDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+
+    membersListUL.innerHTML = ''; // Clear members list
+    currentEditingActionGroupNum = 0;
+}
+
+// Placeholder for member listeners, will be implemented fully later
+function attachActionGroupEditorMemberListeners() {
+    const membersListUL = document.getElementById('editable-action-group-members');
+    if (!membersListUL) return;
+
+    membersListUL.querySelectorAll('.delete-member-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates if this function is called multiple times
+        button.removeEventListener('click', handleRemoveActionGroupMember);
+        // Add the listener
+        button.addEventListener('click', handleRemoveActionGroupMember);
+    });
+}
+
+function handleRemoveActionGroupMember(event) {
+    const button = event.currentTarget;
+    const listItem = button.closest('li.action-group-editor-member'); // Get the parent list item
+
+    if (listItem) {
+        const actNum = parseInt(listItem.dataset.actNum, 10);
+        console.log(`Removing Action A${actNum} from action group editor list.`);
+        listItem.remove(); // Remove the list item from the DOM
+
+        // Optional: If the list becomes empty, add the placeholder back
+        const membersListUL = document.getElementById('editable-action-group-members');
+        if (membersListUL && membersListUL.children.length === 0) {
+            const placeholder = document.createElement('li');
+            placeholder.className = 'list-group-item py-1 px-2 text-muted text-center small';
+            placeholder.textContent = 'Drag individual Actions here';
+            membersListUL.appendChild(placeholder);
+        }
+    } else {
+        console.warn("Could not find list item to remove for button:", button);
+    }
+}
+// --- End Action Group Editor Functions ---
+
+// --- NEW: Function to handle saving an Action Group ---
+function handleSaveActionGroup() {
+    console.log("Save Action Group button clicked.");
+    const membersListUL = document.getElementById('editable-action-group-members');
+
+    if (!membersListUL) {
+        console.error("Missing elements for saving action group!");
+        alert("Error: Could not save action group. Editor elements missing.");
+        return;
+    }
+
+    const memberActionNumbers = [];
+    membersListUL.querySelectorAll('li.action-group-editor-member').forEach(li => {
+        if (li.dataset.actNum) {
+            memberActionNumbers.push(parseInt(li.dataset.actNum, 10));
+        }
+    });
+
+    if (memberActionNumbers.length === 0 && currentEditingActionGroupNum === 0) {
+        alert("Cannot save an empty new action group. Please add at least one action or cancel.");
+        return;
+    }
+    if (memberActionNumbers.length > 10) { // MAX_ACTIONS_PER_GROUP is 10
+        alert(`Cannot save group with more than 10 actions. You have ${memberActionNumbers.length}.`);
+        return;
+    }
+
+    const finalActionArray = new Array(10).fill(0); // MAX_ACTIONS_PER_GROUP
+    for (let i = 0; i < memberActionNumbers.length; i++) {
+        finalActionArray[i] = memberActionNumbers[i];
+    }
+
+    let groupToUpdate = null;
+
+    if (currentEditingActionGroupNum > 0) {
+        groupToUpdate = currentConfig.actionGroups.find(ag => ag.n === currentEditingActionGroupNum);
+    } else {
+        let newGroupIndex = currentConfig.actionGroups.findIndex(ag => !ag.s); // Find first inactive group
+        if (newGroupIndex === -1) { // No inactive group found, try to find one with num 0 if logic allows, or error
+            alert("Error: Maximum number of active Action Groups reached or no inactive slot available.");
+            return;
+        }
+        groupToUpdate = currentConfig.actionGroups[newGroupIndex];
+    }
+
+    groupToUpdate.ar = [...finalActionArray]; // Update action array (using 'ar' key)
+    groupToUpdate.s = memberActionNumbers.length > 0; // Set status active if members exist, else inactive
+    console.log(`Saved Action Group AG${groupToUpdate.n}:`, groupToUpdate);
+    hideActionGroupEditor();
+    displayActionGroups(); // Refresh the list
+}
+
+// --- NEW: Function to handle deleting an Action Group ---
+function handleDeleteActionGroup() {
+    if (currentEditingActionGroupNum <= 0) {
+        console.error("No action group is currently being edited. Cannot delete.");
+        alert("Error: No action group selected for deletion.");
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete Action Group AG${currentEditingActionGroupNum}? This will mark it inactive.`)) {
+        const groupToDelete = currentConfig.actionGroups.find(ag => ag.n === currentEditingActionGroupNum);
+
+        if (groupToDelete) {
+            groupToDelete.s = false; // Mark as inactive
+            groupToDelete.ar = new Array(10).fill(0); // Clear members (MAX_ACTIONS_PER_GROUP)
+            console.log(`Marked Action Group AG${currentEditingActionGroupNum} as inactive.`);
+            hideActionGroupEditor();
+            displayActionGroups();
+        } else {
+            console.error(`Could not find Action Group AG${currentEditingActionGroupNum} to delete.`);
+            alert(`Error: Could not find Action Group AG${currentEditingActionGroupNum}.`);
+        }
+    }
+}
+
+function addActionToEditorList(action) {
+    const membersListUL = document.getElementById('editable-action-group-members');
+    if (!membersListUL) {
+        console.error("Editor members list UL ('editable-action-group-members') not found.");
+        return null;
+    }
+
+    // Check for duplicates
+    const existingMember = membersListUL.querySelector(`li[data-act-num="${action.an}"]`);
+    if (existingMember) {
+        console.log(`Action A${action.an} is already in the group editor.`);
+        existingMember.classList.add('bg-warning-subtle');
+        setTimeout(() => existingMember.classList.remove('bg-warning-subtle'), 1500);
+        return null;
+    }
+
+    const memberLi = document.createElement('li');
+    // Add a class for Sortable handle if needed, and for styling
+    memberLi.className = 'list-group-item py-1 px-2 d-flex justify-content-between align-items-center small action-group-editor-member';
+    memberLi.dataset.actNum = action.an;
+
+    const targetIo = currentConfig.ioVariables.find(io => io.t === action.t && io.n === action.tn);
+    const targetIoName = targetIo ? (targetIo.nm || `IO ${action.tn}`) : `IO ${action.tn}`;
+    const badge1 = getActionBadge1(action.a);
+    const badge2 = getActionBadge2(action.a);
+    const badge3 = getActionBadge3(action.a, action.v);
+
+    memberLi.innerHTML = `
+        <span class="action-number fs-5 fw-bold me-2" title="Action Number ${action.an}">A${action.an}</span>
+        <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+            <div class="action-target-name small text-truncate" title="Target: ${targetIoName}">${targetIoName}</div>
+            <div class="action-badges">
+                <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-outline-danger py-0 px-1 delete-member-btn" title="Remove A${action.an} from group">&times;</button>
+    `;
+
+    membersListUL.appendChild(memberLi);
+    // If it's the first item, clear any placeholder text
+    const placeholder = membersListUL.querySelector('.text-muted.text-center');
+    if (placeholder && membersListUL.children.length > 1) { // Check if placeholder exists and it's not the only child
+        placeholder.remove();
+    }
+
+    // Attach listener to the new remove button (and any existing ones)
+    attachActionGroupEditorMemberListeners();
+    return memberLi;
+}
+
+// --- NEW: displayActionGroups function ---
+function displayActionGroups() {
+    const listElement = document.getElementById('action-groups-list');
+    if (!listElement) {
+        console.error("Action Groups list element not found!");
+        return;
+    }
+
+    listElement.innerHTML = ''; // Clear existing list items
+
+    if (!currentConfig.actionGroups || !Array.isArray(currentConfig.actionGroups)) {
+        console.warn("Action Groups data is missing or not an array.");
+        return;
+    }
+
+    currentConfig.actionGroups.forEach(group => {
+        // Display if status is active AND it has at least one member (first element is not 0)
+        // Note: We check group.ar for the action array, matching the C++ struct and JSON key
+        if (group.s && group.ar && group.ar[0] !== 0) {
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item py-2 px-2 action-group-item'; // Use action-group-item class
+            listItem.dataset.groupNum = group.n; // Store group number
+
+            // Action Groups don't have logic (AND/OR) like Condition Groups
+
+            // Generate a unique ID for the collapsible body
+            const collapseId = `collapseActionGroup${group.n}`;
+
+            // --- Get first action summary details ---
+            let firstActionSummaryHtml = '';
+            // Find the first active action number in the group's action array (ar)
+            const firstActiveActNum = group.ar.find(an => an > 0);
+
+            if (firstActiveActNum) {
+                // Find the corresponding action data from the main actions list
+                const firstAction = currentConfig.actions.find(a => a.an === firstActiveActNum && a.s); // Find the active action
+                if (firstAction) {
+                    // Find the target IO for the action
+                    const targetIo = currentConfig.ioVariables.find(io => io.t === firstAction.t && io.n === firstAction.tn);
+                    // Get the target IO name or a fallback
+                    const targetIoName = targetIo ? (targetIo.nm || `IO ${firstAction.tn}`) : `IO ${firstAction.tn}`;
+                    // Get badge details using helper functions
+                    const badge1 = getActionBadge1(firstAction.a);
+                    const badge2 = getActionBadge2(firstAction.a);
+                    const badge3 = getActionBadge3(firstAction.a, firstAction.v);
+                    // Create a full title for the tooltip
+                    const fullSummaryTitle = `First action: A${firstAction.an} - ${targetIoName} ${badge1.text} ${badge2.text} ${badge3.text}`;
+
+                    // Build the HTML for the first action summary including badges
+                    firstActionSummaryHtml = `
+                        <div class="flex-grow-1 me-2 d-flex flex-column gap-0 text-truncate" title="${fullSummaryTitle}">
+                            <div class="action-target-name small text-truncate">${targetIoName}</div>
+                            <div class="action-badges">
+                                <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                                <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                                <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            // --- End NEW ---
+
+            // --- Build the Collapsed Header (Visible when collapsed) ---
+            const collapsedHeaderHtml = `
+                <div class="action-group-header-collapsed d-flex justify-content-between align-items-center">
+                    <!-- Group ID -->
+                    <span class="action-group-number fs-5 fw-bold me-2" title="Action Group Number ${group.n}">AG${group.n}</span>
+
+                    <!-- First Action Summary (Middle) -->
+                    ${firstActionSummaryHtml}
+
+                    <!-- Controls (Only Collapse/Expand Button) -->
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 collapse-toggle-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                                aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
+                            <span class="collapse-icon">▼</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // --- Build the Expanded Header (Visible when expanded) ---
+            const expandedHeaderHtml = `
+                <div class="action-group-header-expanded d-flex justify-content-between align-items-center mb-0">
+                    <!-- Group ID -->
+                    <div class="d-flex align-items-center flex-grow-1 me-2">
+                        <span class="action-group-number fs-5 fw-bold me-2" title="Action Group Number ${group.n}">AG${group.n}</span>
+                        <!-- No logic badge for action groups -->
+                    </div>
+
+                    <!-- Controls (Edit and Collapse/Expand Buttons) -->
+                    <div class="d-flex align-items-center">
+                        <!-- Edit Button -->
+                        <button class="btn btn-sm btn-outline-secondary edit-group-btn fs-6 p-1 me-2" title="Edit Action Group AG${group.n}"
+                                data-group-type="Action" data-group-num="${group.n}">
+                            ⚙️
+                        </button>
+                        <!-- Collapse/Expand Button (Duplicate, will control the same collapse target) -->
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 collapse-toggle-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                                aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
+                            <span class="collapse-icon">▼</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // --- Build the collapsible body (list of members) ---
+            let membersHtml = '';
+            // Filter for active action numbers in the group's array (ar)
+            const activeMembers = group.ar.filter(actNum => actNum > 0);
+
+            if (activeMembers.length > 0) {
+                membersHtml = activeMembers.map(actNum => {
+                    // Find the corresponding action data
+                    const action = currentConfig.actions.find(a => a.an === actNum && a.s); // Find active action
+                    if (action) {
+                        // Find the target IO for the action
+                        const targetIo = currentConfig.ioVariables.find(io => io.t === action.t && io.n === action.tn);
+                        const targetIoName = targetIo ? (targetIo.nm || `IO ${action.tn}`) : `IO ${action.tn}`;
+                        // Get badge details
+                        const badge1 = getActionBadge1(action.a);
+                        const badge2 = getActionBadge2(action.a);
+                        const badge3 = getActionBadge3(action.a, action.v);
+
+                        return `
+                            <li class="list-group-item py-0 px-3 d-flex justify-content-between align-items-center action-item">
+                                <span class="action-number fs-5 fw-bold me-1" title="Action Number ${actNum}">A${actNum}</span>
+                                <div class="flex-grow-1 me-1 d-flex flex-column gap-0">
+                                    <div class="action-target-name small text-truncate" title="Target: ${targetIoName}">${targetIoName}</div>
+                                    <div class="action-badges">
+                                        <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                                        <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                                        <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                                    </div>
+                                </div>
+                            </li>
+                        `;
+                    } else {
+                        // Display a placeholder if the action is not found or inactive
+                        return `<li class="list-group-item py-1 px-2 text-danger small">A${actNum} (Not Found/Inactive)</li>`;
+                    }
+                }).join(''); // Join the array of list item strings into one string
+            } else {
+                // Display a message if the group has no active members
+                membersHtml = '<li class="list-group-item py-1 px-2 text-muted small">No members added yet.</li>';
+            }
+
+            // Combine the expanded header and the list of members inside the collapsible body
+            const bodyHtml = `
+                <div class="collapse" id="${collapseId}">
+                    ${expandedHeaderHtml} <!-- Place the expanded header inside the collapsible body -->
+                    <ul class="list-group list-group-flush mt-0">
+                        ${membersHtml}
+                    </ul>
+                </div>
+            `;
+
+            // Combine the collapsed header and the collapsible body
+            listItem.innerHTML = collapsedHeaderHtml + bodyHtml;
+
+            // Add the complete list item to the main list
+            listElement.appendChild(listItem);
+        }
+    });
+
+    // --- Attach event listeners for action group items ---
+    // This function will be implemented in the next step
+    attachActionGroupListeners();
+}
+// --- End NEW: displayActionGroups function ---
+
+// --- NEW: Action Group Collapse/Expand Handlers ---
+function handleActionGroupCollapseShow(event) {
+    const collapseTarget = event.target; // The div.collapse
+    const listItem = collapseTarget.closest('.action-group-item');
+
+    if (listItem) {
+        const collapsedHeader = listItem.querySelector('.action-group-header-collapsed');
+        if (collapsedHeader) {
+            collapsedHeader.classList.add('header-hidden');
+        }
+        // Update icons on ALL buttons targeting this collapse element
+        document.querySelectorAll(`[data-bs-target="#${collapseTarget.id}"]`).forEach(btn => {
+            btn.querySelector('.collapse-icon').textContent = '▼'; // Or your 'expanded' icon
+            btn.setAttribute('aria-expanded', 'true');
+        });
+    }
+}
+
+function handleActionGroupCollapseHide(event) {
+    const collapseTarget = event.target; // The div.collapse
+    const listItem = collapseTarget.closest('.action-group-item');
+
+    if (listItem) {
+        const collapsedHeader = listItem.querySelector('.action-group-header-collapsed');
+        if (collapsedHeader) {
+            collapsedHeader.classList.remove('header-hidden');
+        }
+        // Update icons on ALL buttons targeting this collapse element
+        document.querySelectorAll(`[data-bs-target="#${collapseTarget.id}"]`).forEach(btn => {
+            btn.querySelector('.collapse-icon').textContent = '▼'; // Or your 'collapsed' icon
+            btn.setAttribute('aria-expanded', 'false');
+        });
+    }
+}
+
+// --- NEW: Action Group Listeners (for items in the main list) ---
+function attachActionGroupListeners() {
+    // Listeners for collapse/expand icons
+    document.querySelectorAll('.action-group-item .collapse-toggle-btn').forEach(button => {
+        const collapseElement = document.getElementById(button.dataset.bsTarget.substring(1));
+        if (collapseElement) {
+            // Remove existing listeners to prevent duplicates if displayActionGroups is called multiple times
+            collapseElement.removeEventListener('show.bs.collapse', handleActionGroupCollapseShow);
+            collapseElement.removeEventListener('hide.bs.collapse', handleActionGroupCollapseHide);
+
+            // Add new listeners for Bootstrap's collapse events
+            collapseElement.addEventListener('show.bs.collapse', handleActionGroupCollapseShow);
+            collapseElement.addEventListener('hide.bs.collapse', handleActionGroupCollapseHide);
+
+            // Set initial icon state based on current collapse state (if page reloaded with state preserved)
+            // Note: Using the same icon for both states currently, but this is where you'd change it
+            if (collapseElement.classList.contains('show')) {
+                button.querySelector('.collapse-icon').textContent = '▼'; // Or your 'expanded' icon
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                button.querySelector('.collapse-icon').textContent = '▼'; // Or your 'collapsed' icon
+                button.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
+
+    // Listeners for Edit buttons (reusing handleEditGroupClick)
+    document.querySelectorAll('.action-group-item .edit-group-btn').forEach(button => {
+        // Remove existing listener to prevent duplicates
+        button.removeEventListener('click', handleEditGroupClick);
+        // Add the listener
+        button.addEventListener('click', handleEditGroupClick);   // Add the generic handler
+    });
+}
+// --- END: Action Group Listeners ---
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2511,5 +3050,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteConditionGroupBtn = document.getElementById('deleteConditionGroupBtn');
     if (deleteConditionGroupBtn) {
         deleteConditionGroupBtn.addEventListener('click', handleDeleteConditionGroup);
+    }
+
+    // --- Action Group Editor Buttons ---
+    const createActionGroupBtn = document.getElementById('createActionGroupBtn');
+    if (createActionGroupBtn) {
+        createActionGroupBtn.addEventListener('click', handleCreateActionGroupClick);
+    }
+
+    const cancelActionGroupEditBtn = document.getElementById('cancelActionGroupEditBtn');
+    if (cancelActionGroupEditBtn) {
+        cancelActionGroupEditBtn.addEventListener('click', hideActionGroupEditor);
+    }
+
+    // --- NEW: Attach listener for the Save button in the Action Group editor ---
+    const saveActionGroupBtn = document.getElementById('saveActionGroupBtn');
+    if (saveActionGroupBtn) {
+        saveActionGroupBtn.addEventListener('click', handleSaveActionGroup);
+    }
+    // --- NEW: Attach listener for the Delete button in the Action Group editor ---
+    const deleteActionGroupBtn = document.getElementById('deleteActionGroupBtn');
+    if (deleteActionGroupBtn) {
+        deleteActionGroupBtn.addEventListener('click', handleDeleteActionGroup);
     }
 });

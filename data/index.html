@@ -237,10 +237,27 @@
                                     + New Group
                                 </button>
                             </div>
-                            <!-- Action Group Editor (Placeholder - to be detailed if time permits) -->
+                            <!-- Action Group Editor (Initially Hidden) -->
                             <div id="action-group-editor" class="p-2 border rounded bg-light mb-2"
                                 style="display: none;">
-                                <p class="text-muted small">Action Group Editor (Coming Soon)</p>
+                                <div class="d-flex justify-content-end align-items-center mb-2"> <!-- No logic dropdown, so just end alignment -->
+                                    <!-- Right: Action Buttons -->
+                                    <div class="btn-group" role="group" aria-label="Action Group Actions">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            id="cancelActionGroupEditBtn" title="Cancel">❌</button>
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            id="deleteActionGroupBtn" title="Delete Group"
+                                            style="display: none;">🗑️</button>
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            id="saveActionGroupBtn" title="Save">✔️</button>
+                                    </div>
+                                </div>
+                                <ul id="editable-action-group-members" class="list-group list-group-flush small mb-2" style="min-height: 50px;">
+                                    <!-- Draggable/Sortable action members will appear here -->
+                                </ul>
+                                <div id="action-group-drop-zone" class="border p-2 mb-2 text-muted text-center small" style="background-color: #fdf6ff;">
+                                    Drag individual Actions here
+                                </div>
                             </div>
                             <ul id="action-groups-list" class="list-group list-group-flush small">
                                 <!-- Existing action groups will be populated here by JS -->
