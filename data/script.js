@@ -2994,13 +2994,11 @@ function showRuleEditor(ruleData = null) {
         return;
     }
 
-    // Hide the list and the "+ New Rule" button and its title, show the editor
     listDiv.style.display = 'none';
     createRuleBtn.style.display = 'none';
     definedRulesTitle.style.display = 'none';
     editorDiv.style.display = 'block';
 
-    // Reset/Clear previous content in slots
     ifSlot.innerHTML = 'Drag Condition or Condition Group here';
     ifSlot.className = 'border p-2 text-muted text-center'; // Reset classes
     ifSlot.dataset.sourceType = '';
@@ -3015,29 +3013,17 @@ function showRuleEditor(ruleData = null) {
 
 
     if (ruleData) {
-        // --- Populate for Editing Existing Rule ---
         editorTitle.textContent = `Edit Rule R${ruleData.n}`;
         console.log(`Populating editor for Rule R${ruleData.n}`);
         currentEditingRuleNum = ruleData.n;
         editingRuleNumInput.value = ruleData.n;
         deleteButton.style.display = 'inline-block';
-        // saveButton.textContent = '✔️'; // Assuming icon, or 'Update Rule'
-
-        // TODO: Populate IF and THEN slots based on ruleData
-        // This will involve creating visual representations of the condition/action (group)
-        // and adding remove buttons. For now, placeholders remain.
-        // populateRuleEditorSlot(ifSlot, ruleData.cg ? 'condition_group' : 'condition', ruleData.ci, ruleData.s); // 's' for status of rule
-        // populateRuleEditorSlot(thenSlot, ruleData.ag ? 'action_group' : 'action', ruleData.ai, ruleData.s);
-
     } else {
-        // --- Populate for Creating New Rule ---
         editorTitle.textContent = 'Create New Rule';
         console.log("Populating editor for New Rule");
         currentEditingRuleNum = 0;
         editingRuleNumInput.value = '0';
         deleteButton.style.display = 'none';
-        // saveButton.textContent = '✔️'; // Assuming icon, or 'Save Rule'
-        // Placeholders are already set by default
     }
 }
 
