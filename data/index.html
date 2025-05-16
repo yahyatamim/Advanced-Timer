@@ -240,7 +240,8 @@
                             <!-- Action Group Editor (Initially Hidden) -->
                             <div id="action-group-editor" class="p-2 border rounded bg-light mb-2"
                                 style="display: none;">
-                                <div class="d-flex justify-content-end align-items-center mb-2"> <!-- No logic dropdown, so just end alignment -->
+                                <div class="d-flex justify-content-end align-items-center mb-2">
+                                    <!-- No logic dropdown, so just end alignment -->
                                     <!-- Right: Action Buttons -->
                                     <div class="btn-group" role="group" aria-label="Action Group Actions">
                                         <button class="btn btn-sm btn-outline-primary py-0 px-2"
@@ -248,14 +249,16 @@
                                         <button class="btn btn-sm btn-outline-primary py-0 px-2"
                                             id="deleteActionGroupBtn" title="Delete Group"
                                             style="display: none;">🗑️</button>
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
-                                            id="saveActionGroupBtn" title="Save">✔️</button>
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2" id="saveActionGroupBtn"
+                                            title="Save">✔️</button>
                                     </div>
                                 </div>
-                                <ul id="editable-action-group-members" class="list-group list-group-flush small mb-2" style="min-height: 50px;">
+                                <ul id="editable-action-group-members" class="list-group list-group-flush small mb-2"
+                                    style="min-height: 50px;">
                                     <!-- Draggable/Sortable action members will appear here -->
                                 </ul>
-                                <div id="action-group-drop-zone" class="border p-2 mb-2 text-muted text-center small" style="background-color: #fdf6ff;">
+                                <div id="action-group-drop-zone" class="border p-2 mb-2 text-muted text-center small"
+                                    style="background-color: #fdf6ff;">
                                     Drag individual Actions here
                                 </div>
                             </div>
@@ -266,21 +269,65 @@
                     </div>
                 </div>
             </div>
-            <!-- Placeholder for Rules Column -->
+            <!-- Rules Column -->
             <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-header">
                         <h5 class="mb-0">Rules</h5>
                     </div>
-                    <div class="card-body scrollable-column-content">
-                        <p class="text-muted">Drag Groups here...</p>
-                        <!-- Add drop zones later -->
+                    <div class="scrollable-column-content p-2"> <!-- Added p-2 for padding -->
+                        <div id="rules-section" class="mb-3"> <!-- Wrapper for rule content -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 small" id="definedRulesTitle">Defined Rules</h6>
+                                <!-- Title for the list -->
+                                <button class="btn btn-sm btn-success py-0 px-2" id="createRuleBtn" type="button">
+                                    + New Rule
+                                </button>
+                            </div>
+
+                            <!-- Rule Editor (Initially Hidden) -->
+                            <div id="rule-editor" class="p-2 border rounded bg-light mb-2" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0 small" id="ruleEditorTitle">Create New Rule</h6>
+                                    <div class="btn-group" role="group" aria-label="Rule Editor Actions">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                            id="cancelRuleEditBtn" title="Cancel">❌</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-2" id="deleteRuleBtn"
+                                            title="Delete Rule" style="display: none;">🗑️</button>
+                                        <button class="btn btn-sm btn-outline-success py-0 px-2" id="saveRuleBtn"
+                                            title="Save Rule">✔️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Rule Configuration Area -->
+                                <div class="mb-2">
+                                    <label class="form-label form-label-sm fw-bold">IF:</label>
+                                    <div id="rule-editor-if-slot" class="border p-2 text-muted text-center"
+                                        style="min-height: 60px; background-color: #fdf6ff;">
+                                        Drag Condition or Condition Group here
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label form-label-sm fw-bold">THEN:</label>
+                                    <div id="rule-editor-then-slot" class="border p-2 text-muted text-center"
+                                        style="min-height: 60px; background-color: #fdf6ff;">
+                                        Drag Action or Action Group here
+                                    </div>
+                                </div>
+                                <!-- Hidden input to store the rule number being edited (0 for new) -->
+                                <input type="hidden" id="editingRuleNum" value="0">
+                            </div>
+                            <!-- Rules list will be populated here by JS -->
+                            <ul id="rules-list" class="list-group list-group-flush small">
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </div> <!-- End of row -->
 
-        <!-- Device Settings Card -->
+        <!-- Device Settings Card --> // Keep existing content below this line
         <div class="card mb-4 shadow-sm">
             <div class="card-header">
                 <h5 class="mb-0">Device Settings</h5>

@@ -5,6 +5,7 @@ let ioVariableSortable = null;
 
 let currentEditingConditionGroupNum = 0;
 let currentEditingActionGroupNum = 0;
+let currentEditingRuleNum = 0;
 
 const dataTypesMap = {
     0: 'DigitalInput', 1: 'DigitalOutput', 2: 'AnalogInput', 3: 'SoftIO', 4: 'Timer'
@@ -161,7 +162,7 @@ async function loadConfig() {
         displayActions();
         displayConditionGroups();
         displayActionGroups();
-        // Later, add calls here to populate other sections (IOs, Rules, etc.)
+        displayRules(); // Call the new function to display rules
 
     } catch (error) {
         console.error("Error fetching configuration:", error);
@@ -2723,6 +2724,382 @@ function attachActionGroupListeners() {
     });
 }
 
+// Rule Section
+
+function renderConditionItemVisualForRule(condition, isNested = false) {
+    if (!condition || !condition.s) { // Check if condition exists and is active
+        return `<div class="text-muted small ps-2">- C${condition ? condition.cn : '?'} (Not Found/Inactive)</div>`;
+    }
+
+    const targetIo = currentConfig.ioVariables.find(io => io.t === condition.t && io.n === condition.tn);
+    const targetIoName = targetIo ? (targetIo.nm || `IO ${condition.tn}`) : `IO ${condition.tn}`;
+    const targetIoTypeStr = dataTypesMap[condition.t] || `Type ${condition.t}`;
+    const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${condition.tn}: ${targetIo.nm}` : `Unknown IO (Type ${condition.t}, Num ${condition.tn})`;
+
+    const badge1 = getConditionBadge1(condition.cp);
+    const badge2 = getConditionBadge2(condition.cp);
+    const badge3 = getConditionBadge3(condition.cp, condition.v);
+
+    // Use fs-6 for slightly smaller text if nested, or default if not specified
+    const numberFontSize = isNested ? 'fs-6' : 'fs-6'; // Kept fs-6 for consistency in rule display
+    const itemPadding = isNested ? 'py-1 px-0' : 'py-1 px-0'; // Less padding for nested items
+
+    return `
+        <div class="condition-item-visual d-flex align-items-center ${itemPadding}">
+            <span class="condition-number ${numberFontSize} fw-bold me-2" title="Condition C${condition.cn}">C${condition.cn}</span>
+            <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+                <div class="condition-target-name small text-truncate" title="${targetIoTooltip}">${targetIoName}</div>
+                <div class="condition-badges">
+                    <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                    <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                    <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getConditionSourceVisual(rule, ruleNumberForUniqueId) {
+    if (!rule) return '<span class="text-muted small">Invalid condition source</span>';
+
+    let contentHtml = '';
+
+    if (rule.cg) { // Condition Group
+        const group = currentConfig.conditionGroups.find(cg => cg.n === rule.ci && cg.s);
+        if (group) {
+            const logicText = group.l === 0 ? 'All' : 'Any';
+            const logicClass = group.l === 0 ? 'bg-success' : 'bg-warning text-dark';
+            const logicTitle = group.l === 0 ? 'All conditions must be true' : 'Any condition can be true';
+            const nestedCollapseId = `rule${ruleNumberForUniqueId}CondGroupDetails${group.n}`;
+
+            let membersHtml = '';
+            const activeMembers = group.ca.filter(conNum => conNum > 0);
+            if (activeMembers.length > 0) {
+                membersHtml = activeMembers.map(conNum => {
+                    const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s);
+                    return `<li class="list-group-item p-0 border-0">${renderConditionItemVisualForRule(condition, true)}</li>`;
+                }).join('');
+            } else {
+                membersHtml = '<li class="list-group-item p-0 border-0 text-muted small">No active members.</li>';
+            }
+
+            contentHtml = `
+                <div class="condition-group-item-visual">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="d-flex align-items-center">
+                            <span class="condition-group-number fs-6 fw-bold me-2" title="Condition Group CG${group.n}">CG${group.n}</span>
+                            <span class="badge ${logicClass}" title="${logicTitle}">${logicText}</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1 rule-nested-group-toggle" 
+                                data-bs-toggle="collapse" data-bs-target="#${nestedCollapseId}" 
+                                aria-expanded="true" aria-controls="${nestedCollapseId}" title="Toggle Group Members">
+                            ▼
+                        </button>
+                    </div>
+                    <div class="collapse show ps-3" id="${nestedCollapseId}">
+                        <ul class="list-group list-group-flush small">
+                            ${membersHtml}
+                        </ul>
+                    </div>
+                </div>`;
+        } else {
+            contentHtml = `<span class="text-danger small">Condition Group CG${rule.ci} (Not Found/Inactive)</span>`;
+        }
+    } else { // Single Condition
+        const condition = currentConfig.conditions.find(c => c.cn === rule.ci && c.s);
+        if (condition) {
+            contentHtml = renderConditionItemVisualForRule(condition, false);
+        } else {
+            contentHtml = `<span class="text-danger small">Condition C${rule.ci} (Not Found/Inactive)</span>`;
+        }
+    }
+    return `<div class="fw-bold mb-1">IF:</div><div>${contentHtml}</div>`;
+}
+
+function renderActionItemVisualForRule(action, isNested = false) {
+    if (!action || !action.s) { // Check if action exists and is active
+        return `<div class="text-muted small ps-2">- A${action ? action.an : '?'} (Not Found/Inactive)</div>`;
+    }
+
+    const targetIo = currentConfig.ioVariables.find(io => io.t === action.t && io.n === action.tn);
+    const targetIoName = targetIo ? (targetIo.nm || `IO ${action.tn}`) : `IO ${action.tn}`;
+    const targetIoTypeStr = dataTypesMap[action.t] || `Type ${action.t}`;
+    const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${action.tn}: ${targetIo.nm}` : `Unknown IO (Type ${action.t}, Num ${action.tn})`;
+
+    const badge1 = getActionBadge1(action.a);
+    const badge2 = getActionBadge2(action.a);
+    const badge3 = getActionBadge3(action.a, action.v);
+
+    const numberFontSize = isNested ? 'fs-6' : 'fs-6';
+    const itemPadding = isNested ? 'py-1 px-0' : 'py-1 px-0';
+
+    return `
+        <div class="action-item-visual d-flex align-items-center ${itemPadding}">
+            <span class="action-number ${numberFontSize} fw-bold me-2" title="Action A${action.an}">A${action.an}</span>
+            <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+                <div class="action-target-name small text-truncate" title="${targetIoTooltip}">${targetIoName}</div>
+                <div class="action-badges">
+                    <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                    <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                    <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getActionTargetVisual(rule, ruleNumberForUniqueId) {
+    if (!rule) return '<span class="text-muted small">Invalid action target</span>';
+    let contentHtml = '';
+
+    if (rule.ag) { // Action Group
+        const group = currentConfig.actionGroups.find(ag => ag.n === rule.ai && ag.s);
+        if (group) {
+            const nestedCollapseId = `rule${ruleNumberForUniqueId}ActGroupDetails${group.n}`;
+            let membersHtml = '';
+            const activeMembers = group.ar.filter(actNum => actNum > 0); // 'ar' for actionArray
+
+            if (activeMembers.length > 0) {
+                membersHtml = activeMembers.map(actNum => {
+                    const action = currentConfig.actions.find(a => a.an === actNum && a.s);
+                    return `<li class="list-group-item p-0 border-0">${renderActionItemVisualForRule(action, true)}</li>`;
+                }).join('');
+            } else {
+                membersHtml = '<li class="list-group-item p-0 border-0 text-muted small">No active members.</li>';
+            }
+
+            contentHtml = `
+                <div class="action-group-item-visual">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="action-group-number fs-6 fw-bold" title="Action Group AG${group.n}">AG${group.n}</span>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1 rule-nested-group-toggle" 
+                                data-bs-toggle="collapse" data-bs-target="#${nestedCollapseId}" 
+                                aria-expanded="true" aria-controls="${nestedCollapseId}" title="Toggle Group Members">
+                            ▼
+                        </button>
+                    </div>
+                    <div class="collapse show ps-3" id="${nestedCollapseId}">
+                        <ul class="list-group list-group-flush small">
+                            ${membersHtml}
+                        </ul>
+                    </div>
+                </div>`;
+        } else {
+            contentHtml = `<span class="text-danger small">Action Group AG${rule.ai} (Not Found/Inactive)</span>`;
+        }
+    } else { // Single Action
+        const action = currentConfig.actions.find(a => a.an === rule.ai && a.s);
+        if (action) {
+            contentHtml = renderActionItemVisualForRule(action, false);
+        } else {
+            contentHtml = `<span class="text-danger small">Action A${rule.ai} (Not Found/Inactive)</span>`;
+        }
+    }
+    return `<div class="fw-bold mb-1">THEN:</div><div>${contentHtml}</div>`;
+}
+
+function displayRules() {
+    const listElement = document.getElementById('rules-list');
+    if (!listElement) {
+        console.error("Rules list element ('rules-list') not found!");
+        return;
+    }
+
+    listElement.innerHTML = ''; // Clear existing list items
+
+    if (!currentConfig.rules || !Array.isArray(currentConfig.rules)) {
+        console.warn("Rules data is missing or not an array. Cannot populate list.");
+        const placeholder = document.createElement('li');
+        placeholder.className = 'list-group-item text-muted py-1';
+        placeholder.textContent = 'No rules defined or data missing.';
+        listElement.appendChild(placeholder);
+        return;
+    }
+
+    const activeRules = currentConfig.rules.filter(rule => rule.s); // Filter for active rules
+
+    if (activeRules.length === 0) {
+        const placeholder = document.createElement('li');
+        placeholder.className = 'list-group-item text-muted py-1';
+        placeholder.textContent = 'No active rules. Click "+ New Rule" to create one.';
+        listElement.appendChild(placeholder);
+        return;
+    }
+
+    activeRules.forEach(rule => {
+        const listItem = document.createElement('li');
+        // Use p-0 to remove default padding, we'll control it internally
+        listItem.className = 'list-group-item p-0 rule-item mb-1 border rounded'; // Added border and margin
+        listItem.dataset.ruleNum = rule.n; // Store rule number
+
+        const collapseId = `ruleDetails${rule.n}`;
+
+        listItem.innerHTML = `
+            <!-- Line 1: Rule Header -->
+            <div class="rule-header d-flex justify-content-between align-items-center p-2">
+                <span class="rule-id-drag-handle fw-bold fs-5" title="Rule R${rule.n}, Drag to reorder">R${rule.n}</span>
+                <div class="rule-controls btn-group btn-group-sm">
+                    <button class="btn btn-sm btn-outline-secondary edit-rule-btn py-0 px-1" title="Edit Rule R${rule.n}" 
+                            data-rule-num="${rule.n}">
+                        ⚙️
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary rule-details-toggle py-0 px-1" title="Toggle Details"
+                            data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                            aria-expanded="true" aria-controls="${collapseId}">
+                        ▼
+                    </button>
+                </div>
+            </div>
+            <!-- Lines 2 & 3: Collapsible Details -->
+            <div class="collapse show rule-details-body" id="${collapseId}">
+                <!-- Line 2: Condition Source Detail -->
+                <div class="rule-condition-detail p-2 ps-3 border-top">
+                    ${getConditionSourceVisual(rule, rule.n)}
+                </div>
+                <!-- Line 3: Action Target Detail -->
+                <div class="rule-action-detail p-2 ps-3 border-top">
+                    ${getActionTargetVisual(rule, rule.n)}
+                </div>
+            </div>
+        `;
+        listElement.appendChild(listItem);
+    });
+
+    attachEditRuleListeners();
+    attachRuleToggleListeners(); // Attach listeners for the new main toggle buttons
+}
+
+function attachRuleToggleListeners() {
+    document.querySelectorAll('.rule-details-toggle').forEach(button => {
+        // Bootstrap handles the collapse/expand. We just ensure the icon remains '▼'.
+        // No specific event listener needed here for icon change as per new requirement.
+    });
+}
+
+function showRuleEditor(ruleData = null) {
+    const editorDiv = document.getElementById('rule-editor');
+    const listDiv = document.getElementById('rules-list');
+    const createRuleBtn = document.getElementById('createRuleBtn');
+    const definedRulesTitle = document.getElementById('definedRulesTitle');
+    const editorTitle = document.getElementById('ruleEditorTitle');
+
+    const ifSlot = document.getElementById('rule-editor-if-slot');
+    const thenSlot = document.getElementById('rule-editor-then-slot');
+    const deleteButton = document.getElementById('deleteRuleBtn');
+    const saveButton = document.getElementById('saveRuleBtn'); // Assuming this is the text, not an icon
+    const editingRuleNumInput = document.getElementById('editingRuleNum');
+
+    if (!editorDiv || !listDiv || !ifSlot || !thenSlot || !deleteButton || !saveButton || !editingRuleNumInput || !createRuleBtn || !definedRulesTitle || !editorTitle) {
+        console.error("Missing elements for showRuleEditor!");
+        return;
+    }
+
+    // Hide the list and the "+ New Rule" button and its title, show the editor
+    listDiv.style.display = 'none';
+    createRuleBtn.style.display = 'none';
+    definedRulesTitle.style.display = 'none';
+    editorDiv.style.display = 'block';
+
+    // Reset/Clear previous content in slots
+    ifSlot.innerHTML = 'Drag Condition or Condition Group here';
+    ifSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    ifSlot.dataset.sourceType = '';
+    ifSlot.dataset.sourceId = '';
+    ifSlot.dataset.sourceName = ''; // Clear any stored name
+
+    thenSlot.innerHTML = 'Drag Action or Action Group here';
+    thenSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    thenSlot.dataset.targetType = '';
+    thenSlot.dataset.targetId = '';
+    thenSlot.dataset.targetName = ''; // Clear any stored name
+
+
+    if (ruleData) {
+        // --- Populate for Editing Existing Rule ---
+        editorTitle.textContent = `Edit Rule R${ruleData.n}`;
+        console.log(`Populating editor for Rule R${ruleData.n}`);
+        currentEditingRuleNum = ruleData.n;
+        editingRuleNumInput.value = ruleData.n;
+        deleteButton.style.display = 'inline-block';
+        // saveButton.textContent = '✔️'; // Assuming icon, or 'Update Rule'
+
+        // TODO: Populate IF and THEN slots based on ruleData
+        // This will involve creating visual representations of the condition/action (group)
+        // and adding remove buttons. For now, placeholders remain.
+        // populateRuleEditorSlot(ifSlot, ruleData.cg ? 'condition_group' : 'condition', ruleData.ci, ruleData.s); // 's' for status of rule
+        // populateRuleEditorSlot(thenSlot, ruleData.ag ? 'action_group' : 'action', ruleData.ai, ruleData.s);
+
+    } else {
+        // --- Populate for Creating New Rule ---
+        editorTitle.textContent = 'Create New Rule';
+        console.log("Populating editor for New Rule");
+        currentEditingRuleNum = 0;
+        editingRuleNumInput.value = '0';
+        deleteButton.style.display = 'none';
+        // saveButton.textContent = '✔️'; // Assuming icon, or 'Save Rule'
+        // Placeholders are already set by default
+    }
+}
+
+function hideRuleEditor() {
+    const editorDiv = document.getElementById('rule-editor');
+    const listDiv = document.getElementById('rules-list');
+    const createRuleBtn = document.getElementById('createRuleBtn');
+    const definedRulesTitle = document.getElementById('definedRulesTitle');
+
+    if (!editorDiv || !listDiv || !createRuleBtn || !definedRulesTitle) {
+        console.error("Missing elements for hiding rule editor!");
+        return;
+    }
+
+    // Hide the editor, show the list and the "+ New Rule" button and its title
+    editorDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+    createRuleBtn.style.display = 'block';
+    definedRulesTitle.style.display = 'block';
+
+    // Reset editor state
+    currentEditingRuleNum = 0;
+    document.getElementById('editingRuleNum').value = '0';
+    document.getElementById('ruleEditorTitle').textContent = 'Create New Rule'; // Reset title
+
+    // Clear IF/THEN slots 
+    const ifSlot = document.getElementById('rule-editor-if-slot');
+    ifSlot.innerHTML = 'Drag Condition or Condition Group here';
+    ifSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    ifSlot.dataset.sourceType = '';
+    ifSlot.dataset.sourceId = '';
+    ifSlot.dataset.sourceName = '';
+
+    const thenSlot = document.getElementById('rule-editor-then-slot');
+    thenSlot.innerHTML = 'Drag Action or Action Group here';
+    thenSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    thenSlot.dataset.targetType = '';
+    thenSlot.dataset.targetId = '';
+    thenSlot.dataset.targetName = '';
+}
+
+function attachEditRuleListeners() {
+    document.querySelectorAll('.edit-rule-btn').forEach(button => {
+        button.removeEventListener('click', handleEditRuleClick); // Prevent duplicates
+        button.addEventListener('click', handleEditRuleClick);
+    });
+}
+
+function handleEditRuleClick(event) {
+    const button = event.currentTarget;
+    const ruleNum = parseInt(button.dataset.ruleNum, 10);
+
+    const ruleData = currentConfig.rules.find(r => r.n === ruleNum && r.s);
+
+    if (ruleData) {
+        showRuleEditor(ruleData);
+    } else {
+        console.error(`Could not find active Rule R${ruleNum} to edit.`);
+        alert(`Error: Rule R${ruleNum} not found or is inactive.`);
+    }
+}
+
 // Drag and Drop Section
 
 function initializeDragAndDrop() {
@@ -3069,5 +3446,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteActionGroupBtn = document.getElementById('deleteActionGroupBtn');
     if (deleteActionGroupBtn) {
         deleteActionGroupBtn.addEventListener('click', handleDeleteActionGroup);
+    }
+
+    // --- Rule Section Buttons ---
+    const createRuleBtn = document.getElementById('createRuleBtn');
+    if (createRuleBtn) {
+        createRuleBtn.addEventListener('click', () => showRuleEditor());
+    }
+
+    const cancelRuleEditBtn = document.getElementById('cancelRuleEditBtn');
+    if (cancelRuleEditBtn) {
+        cancelRuleEditBtn.addEventListener('click', hideRuleEditor);
+    }
+
+    // Placeholder for save and delete rule buttons
+    const saveRuleBtn = document.getElementById('saveRuleBtn');
+    if (saveRuleBtn) {
+        saveRuleBtn.addEventListener('click', () => {
+            alert("Save Rule functionality not yet implemented.");
+            // Later: handleSaveRule();
+        });
+    }
+    const deleteRuleBtn = document.getElementById('deleteRuleBtn');
+    if (deleteRuleBtn) {
+        deleteRuleBtn.addEventListener('click', () => {
+            alert("Delete Rule functionality not yet implemented.");
+            // Later: handleDeleteRule();
+        });
     }
 });
