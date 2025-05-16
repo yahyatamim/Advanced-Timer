@@ -36,11 +36,11 @@
                                 <h6 class="mb-0 small">Digital Inputs</h6>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#collapseDigitalInputs"
-                                    aria-expanded="true" aria-controls="collapseDigitalInputs">
+                                    aria-expanded="false" aria-controls="collapseDigitalInputs">
                                     <span class="collapse-icon">▼</span>
                                 </button>
                             </div>
-                            <div class="collapse show" id="collapseDigitalInputs">
+                            <div class="collapse" id="collapseDigitalInputs">
                                 <ul class="list-group list-group-flush small" id="digital-inputs-list">
                                 </ul>
                             </div>
@@ -51,11 +51,11 @@
                                 <h6 class="mb-0 small">Digital Outputs</h6>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#collapseDigitalOutputs"
-                                    aria-expanded="true" aria-controls="collapseDigitalOutputs">
+                                    aria-expanded="false" aria-controls="collapseDigitalOutputs">
                                     <span class="collapse-icon">▼</span>
                                 </button>
                             </div>
-                            <div class="collapse show" id="collapseDigitalOutputs">
+                            <div class="collapse" id="collapseDigitalOutputs">
                                 <ul class="list-group list-group-flush small" id="digital-outputs-list">
                                     <li class="list-group-item text-muted py-1">Loading outputs...</li>
                                 </ul>
@@ -67,11 +67,11 @@
                                 <h6 class="mb-0 small">Analog Inputs</h6>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#collapseAnalogInputs"
-                                    aria-expanded="true" aria-controls="collapseAnalogInputs">
+                                    aria-expanded="false" aria-controls="collapseAnalogInputs">
                                     <span class="collapse-icon">▼</span>
                                 </button>
                             </div>
-                            <div class="collapse show" id="collapseAnalogInputs">
+                            <div class="collapse" id="collapseAnalogInputs">
                                 <ul class="list-group list-group-flush small" id="analog-inputs-list">
                                     <li class="list-group-item text-muted py-1">Loading inputs...</li>
                                 </ul>
@@ -84,12 +84,12 @@
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <h6 class="mb-0 small">Soft IO</h6>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#collapseSoftIo" aria-expanded="true"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseSoftIo" aria-expanded="false"
                                     aria-controls="collapseSoftIo">
                                     <span class="collapse-icon">▼</span>
                                 </button>
                             </div>
-                            <div class="collapse show" id="collapseSoftIo">
+                            <div class="collapse" id="collapseSoftIo">
                                 <ul class="list-group list-group-flush small" id="softio-list">
                                     <li class="list-group-item text-muted py-1">Loading SoftIO...</li>
                                 </ul>
@@ -101,12 +101,12 @@
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <h6 class="mb-0 small">Timers</h6>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#collapseTimers" aria-expanded="true"
+                                    data-bs-toggle="collapse" data-bs-target="#collapseTimers" aria-expanded="false"
                                     aria-controls="collapseTimers">
                                     <span class="collapse-icon">▼</span>
                                 </button>
                             </div>
-                            <div class="collapse show" id="collapseTimers">
+                            <div class="collapse" id="collapseTimers">
                                 <ul class="list-group list-group-flush small" id="timers-list">
                                     <li class="list-group-item text-muted py-1">Loading Timers...</li>
                                 </ul>
@@ -182,28 +182,34 @@
                             <div id="condition-group-editor" class="p-2 border rounded bg-light mb-2"
                                 style="display: none;">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-
-                                    <!-- Center: Logic Toggle -->
-                                    <div class="d-flex align-items-center">
-                                        <span class="small">All</span>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" role="switch"
-                                                id="conditionGroupLogicToggle">
-                                            <label class="form-check-label" for="conditionGroupLogicToggle"></label>
-                                            <!-- Empty label -->
-                                        </div>
-                                        <span class="small">Any</span>
+                                    <!-- Center: Logic Dropdown -->
+                                    <div class="btn-group">
+                                        <button type="button"
+                                            class="btn btn-outline-primary btn-sm dropdown-toggle py-0 px-2"
+                                            id="conditionGroupLogicButton" data-bs-toggle="dropdown"
+                                            aria-expanded="false">
+                                            {Logic} <!-- Placeholder, JS will set this -->
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#"
+                                                    onclick="setConditionGroupLogic(0, 'All'); return false;">All</a>
+                                            </li>
+                                            <li><a class="dropdown-item" href="#"
+                                                    onclick="setConditionGroupLogic(1, 'Any'); return false;">Any</a>
+                                            </li>
                                     </div>
+                                    <!-- Hidden input to store the actual logic value (0 for AND, 1 for OR) -->
+                                    <input type="hidden" id="conditionGroupLogicValue" value="0">
 
                                     <!-- Right: Action Buttons -->
-                                    <div class="d-flex">
-                                        <button class="btn btn-sm btn-danger me-1 py-0 px-2"
+                                    <div class="btn-group" role="group" aria-label="Condition Group Actions">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
                                             id="cancelConditionGroupEditBtn" title="Cancel">❌</button>
-                                        <button class="btn btn-sm btn-danger me-1 py-0 px-2"
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
                                             id="deleteConditionGroupBtn" title="Delete Group"
                                             style="display: none;">🗑️</button>
-                                        <button class="btn btn-sm btn-primary py-0 px-2" id="saveConditionGroupBtn"
-                                            title="Save">✔️</button>
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            id="saveConditionGroupBtn" title="Save">✔️</button>
                                     </div>
                                 </div>
                                 <ul id="editable-condition-group-members" class="list-group list-group-flush small mb-2"
@@ -697,6 +703,7 @@
     </div>
 
 
+    <script src="/popper.min.js"></script>
     <script src="/bootstrap.min.js"></script>
     <script src="/Sortable.min.js"></script>
     <script src="/script.js"></script>

@@ -30,7 +30,7 @@ const operationModeShortMap = {
     4: 'StDly',// DO
     5: 'Once', // Timer
     6: 'Rept', // Timer
-    7: 'DlOf',// DO 
+    7: 'DlOf',// DO
     8: 'Scle', // AI
     9: 'Pers'  // SoftIO
 };
@@ -301,7 +301,7 @@ function populateIoVariables(ioVariables) {
                     </div>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary edit-io-btn fs-6 p-1" title="Edit"
-                        data-bs-toggle="modal" data-bs-target="#editDoVariableModal" 
+                        data-bs-toggle="modal" data-bs-target="#editDoVariableModal"
                         data-type="${dataTypesMap[io.t]}" data-num="${io.n}">
                     ⚙️
                 </button>
@@ -1174,15 +1174,15 @@ function displayActions() {
                 <span class="action-number fs-5 fw-bold me-2" title="Action Number ${act.an}">A${act.an}</span>
                 <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
                     <div class="action-target-name small text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</div>
-                    <div class="action-badges"> 
+                    <div class="action-badges">
                         <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
                         <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
                         <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
                     </div>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary edit-action-btn fs-6 p-1" title="Edit Action A${act.an}"
-                    data-bs-toggle="modal" data-bs-target="#createActionModal" 
-                    data-act-num="${act.an}"> 
+                    data-bs-toggle="modal" data-bs-target="#createActionModal"
+                    data-act-num="${act.an}">
                     ⚙️
                 </button>
             `;
@@ -1826,110 +1826,144 @@ function displayConditionGroups() {
     }
 
     currentConfig.conditionGroups.forEach(group => {
-        // Only display if status (s) is true (active) and the group has at least one member
-        // We check the first slot in the array for simplicity, assuming 0 means empty.
-        // Use group.ca as this is the key in the JavaScript currentConfig object.
         if (group.s && group.ca && group.ca[0] !== 0) {
             const listItem = document.createElement('li');
-            // Use list-group-item and flexbox for layout
-            listItem.className = 'list-group-item py-2 px-2 condition-group-item'; // Add a specific class
-
-            // Store group number for reference
+            listItem.className = 'list-group-item py-2 px-2 condition-group-item';
             listItem.dataset.groupNum = group.n;
 
-            // Determine Logic Badge
-            const logicText = group.l === 0 ? 'All' : 'Any'; // 0: andLogic (All), 1: orLogic (Any)
-            const logicClass = group.l === 0 ? 'bg-success' : 'bg-warning text-dark'; // Green for AND, Yellow for OR
+            // Determine Logic Badge details
+            const logicText = group.l === 0 ? 'All' : 'Any';
+            const logicClass = group.l === 0 ? 'bg-success' : 'bg-warning text-dark';
             const logicTitle = group.l === 0 ? 'All conditions must be true' : 'Any condition can be true';
 
             // Generate a unique ID for the collapsible body
             const collapseId = `collapseConditionGroup${group.n}`;
 
-            // --- Build the header (always visible) ---
-            const headerHtml = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <!-- Group ID and Logic Badge -->
-                    <div class="d-flex align-items-center flex-grow-1 me-2">
-                        <span class="condition-group-number fs-5 fw-bold me-2" title="Condition Group Number ${group.n}">CG${group.n}</span>
-                        <span class="badge ${logicClass} me-2" title="${logicTitle}">${logicText}</span>
-                        <!-- Optional: Add group name here if you add user-defined names later -->
-                    </div>
+            // --- NEW: Get first condition summary details ---
+            let firstConditionSummaryHtml = '';
+            const firstActiveConNum = group.ca.find(cn => cn > 0);
 
-                    <!-- Controls (Collapse/Expand, Edit) -->
+            if (firstActiveConNum) {
+                const firstCondition = currentConfig.conditions.find(c => c.cn === firstActiveConNum && c.s);
+                if (firstCondition) {
+                    const targetIo = currentConfig.ioVariables.find(io => io.t === firstCondition.t && io.n === firstCondition.tn);
+                    const targetIoName = targetIo ? (targetIo.nm || `IO ${firstCondition.tn}`) : `IO ${firstCondition.tn}`;
+                    const badge1 = getConditionBadge1(firstCondition.cp);
+                    const badge2 = getConditionBadge2(firstCondition.cp);
+                    const badge3 = getConditionBadge3(firstCondition.cp, firstCondition.v);
+                    const fullSummaryTitle = `First condition: C${firstCondition.cn} - ${targetIoName} ${badge1.text} ${badge2.text} ${badge3.text}`;
+
+                    // Build the HTML for the first condition summary including badges
+                    firstConditionSummaryHtml = `
+                        <div class="flex-grow-1 me-2 d-flex flex-column gap-0 text-truncate" title="${fullSummaryTitle}">
+                            <div class="condition-target-name small text-truncate">${targetIoName}</div>
+                            <div class="condition-badges">
+                                <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+                                <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+                                <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            // --- End NEW ---
+
+
+            // --- Build the Collapsed Header (Visible when collapsed) ---
+            const collapsedHeaderHtml = `
+                <div class="condition-group-header-collapsed d-flex justify-content-between align-items-center">
+                    <!-- Group ID -->
+                    <span class="condition-group-number fs-5 fw-bold me-2" title="Condition Group Number ${group.n}">CG${group.n}</span>
+
+                    <!-- First Condition Summary (Middle) -->
+                    ${firstConditionSummaryHtml}
+
+                    <!-- Controls (Only Collapse/Expand Button) -->
                     <div class="d-flex align-items-center">
-                        <!-- Collapse/Expand Button -->
-                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 me-2 collapse-toggle-btn" type="button"
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 collapse-toggle-btn" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#${collapseId}"
                                 aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
-                            <span class="collapse-icon">►</span> <!-- Default to collapsed icon -->
-                        </button>
-                                                <!-- Edit Button -->
-                        <button class="btn btn-sm btn-outline-secondary edit-group-btn fs-6 p-1" title="Edit Condition Group CG${group.n}"
-                                data-group-type="Condition" data-group-num="${group.n}">
-                            ⚙️
+                            <span class="collapse-icon">▼</span>
                         </button>
                     </div>
                 </div>
             `;
 
-            // --- Build the collapsible body (initially hidden) ---
+            // --- Build the Expanded Header (Visible when expanded) ---
+            const expandedHeaderHtml = `
+                <div class="condition-group-header-expanded d-flex justify-content-between align-items-center mb-0">
+                    <!-- Group ID and Logic Badge -->
+                    <div class="d-flex align-items-center flex-grow-1 me-2">
+                        <span class="condition-group-number fs-5 fw-bold me-2" title="Condition Group Number ${group.n}">CG${group.n}</span>
+                        <span class="badge ${logicClass} me-2" title="${logicTitle}">${logicText}</span>
+                        <!-- No first condition summary here -->
+                    </div>
+
+                    <!-- Controls (Edit and Collapse/Expand Buttons) -->
+                    <div class="d-flex align-items-center">
+                        <!-- Edit Button -->
+                        <button class="btn btn-sm btn-outline-secondary edit-group-btn fs-6 p-1 me-2" title="Edit Condition Group CG${group.n}"
+                                data-group-type="Condition" data-group-num="${group.n}">
+                            ⚙️
+                        </button>
+                        <!-- Collapse/Expand Button (Duplicate, will control the same collapse target) -->
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 collapse-toggle-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                                aria-expanded="false" aria-controls="${collapseId}" title="Toggle Members">
+                            <span class="collapse-icon">▼</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+
+            // --- Build the collapsible body ---
             let membersHtml = '';
-            // Filter out the 0 placeholders and map to list items
             const activeMembers = group.ca.filter(conNum => conNum > 0);
 
             if (activeMembers.length > 0) {
                 membersHtml = activeMembers.map(conNum => {
-                    // Find the actual condition object to get its details for display
                     const condition = currentConfig.conditions.find(c => c.cn === conNum && c.s);
                     if (condition) {
-                        // Find the target IO Variable for context
                         const targetIo = currentConfig.ioVariables.find(io => io.t === condition.t && io.n === condition.tn);
-                        const targetIoName = targetIo ? targetIo.nm : `IO ${condition.tn}`; // Use name or fallback
-                        const targetIoTypeStr = dataTypesMap[condition.t] || `Type ${condition.t}`;
-                        const targetIoTooltip = targetIo ? `${targetIoTypeStr} #${condition.tn}: ${targetIo.nm}` : `Unknown IO (Type ${condition.t}, Num ${condition.tn})`;
-
-                        // Get badge details using helper functions (reusing condition badges)
+                        const targetIoName = targetIo ? (targetIo.nm || `IO ${condition.tn}`) : `IO ${condition.tn}`;
                         const badge1 = getConditionBadge1(condition.cp);
                         const badge2 = getConditionBadge2(condition.cp);
                         const badge3 = getConditionBadge3(condition.cp, condition.v);
 
-                        // Display member condition ID and a brief summary
                         return `
-                            <li class="list-group-item py-1 px-2 d-flex align-items-center small">
-                                <span class="condition-number me-2" title="Condition Number ${conNum}">C${conNum}</span>
-                                <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
-                                    <div class="condition-target-name text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</div>
+                            <li class="list-group-item py-0 px-3 d-flex justify-content-between align-items-center condition-item">
+                                <span class="condition-number fs-5 fw-bold me-1" title="Condition Number ${conNum}">C${conNum}</span>
+                                <div class="flex-grow-1 me-1 d-flex flex-column gap-0">
+                                    <div class="condition-target-name small text-truncate" title="Target: ${targetIoName}">${targetIoName}</div>
                                     <div class="condition-badges">
                                         <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
                                         <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
                                         <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
                                     </div>
                                 </div>
-                                <!-- No individual edit/delete here in display mode -->
                             </li>
                         `;
                     } else {
-                        // Handle case where a member condition is not found (e.g., deleted)
                         return `<li class="list-group-item py-1 px-2 text-danger small">C${conNum} (Not Found/Inactive)</li>`;
                     }
-                }).join(''); // Join the array of list items into a single string
+                }).join('');
             } else {
                 membersHtml = '<li class="list-group-item py-1 px-2 text-muted small">No members added yet.</li>';
             }
 
-
             const bodyHtml = `
                 <div class="collapse" id="${collapseId}">
-                    <ul class="list-group list-group-flush mt-2">
+                    ${expandedHeaderHtml} <!-- Place the expanded header inside the collapsible body -->
+                    <ul class="list-group list-group-flush mt-0">
                         ${membersHtml}
                     </ul>
                 </div>
             `;
 
-            // Combine header and body
-            listItem.innerHTML = headerHtml + bodyHtml;
+            // Combine collapsed header and the collapsible body
+            listItem.innerHTML = collapsedHeaderHtml + bodyHtml;
 
-            // Add the list item to the UI list
             listElement.appendChild(listItem);
         }
     });
@@ -1959,7 +1993,7 @@ function attachConditionGroupListeners() {
                 button.querySelector('.collapse-icon').textContent = '▼';
                 button.setAttribute('aria-expanded', 'true');
             } else {
-                button.querySelector('.collapse-icon').textContent = '►';
+                button.querySelector('.collapse-icon').textContent = '▼';
                 button.setAttribute('aria-expanded', 'false');
             }
         }
@@ -1976,19 +2010,39 @@ function attachConditionGroupListeners() {
 
 function handleCollapseShow(event) {
     // When the collapse area is shown, change the button icon to '▼'
-    const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
-    if (button) {
-        button.querySelector('.collapse-icon').textContent = '▼';
-        button.setAttribute('aria-expanded', 'true');
+    // Also, hide the "collapsed" header and ensure the "expanded" header (inside the collapse target) is visible.
+    const collapseTarget = event.target; // This is the div with class 'collapse'
+    const listItem = collapseTarget.closest('.condition-group-item'); // Find the parent list item
+
+    if (listItem) {
+        const collapsedHeader = listItem.querySelector('.condition-group-header-collapsed');
+        if (collapsedHeader) {
+            collapsedHeader.classList.add('header-hidden'); // Hide the collapsed header
+        }
+        // Update icons on ALL buttons targeting this collapse element
+        document.querySelectorAll(`[data-bs-target="#${collapseTarget.id}"]`).forEach(btn => {
+            btn.querySelector('.collapse-icon').textContent = '▼';
+            btn.setAttribute('aria-expanded', 'true');
+        });
     }
 }
 
 function handleCollapseHide(event) {
-    // When the collapse area is hidden, change the button icon to '►'
-    const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
-    if (button) {
-        button.querySelector('.collapse-icon').textContent = '►';
-        button.setAttribute('aria-expanded', 'false');
+    // When the collapse area is hidden, change the button icon to '▼'
+    // Also, show the "collapsed" header. The "expanded" header will be hidden as it's inside the collapse target.
+    const collapseTarget = event.target; // This is the div with class 'collapse'
+    const listItem = collapseTarget.closest('.condition-group-item'); // Find the parent list item
+
+    if (listItem) {
+        const collapsedHeader = listItem.querySelector('.condition-group-header-collapsed');
+        if (collapsedHeader) {
+            collapsedHeader.classList.remove('header-hidden'); // Show the collapsed header
+        }
+        // Update icons on ALL buttons targeting this collapse element
+        document.querySelectorAll(`[data-bs-target="#${collapseTarget.id}"]`).forEach(btn => {
+            btn.querySelector('.collapse-icon').textContent = '▼';
+            btn.setAttribute('aria-expanded', 'false');
+        });
     }
 }
 
@@ -2026,11 +2080,13 @@ function showConditionGroupEditor(groupData = null) {
     const editorDiv = document.getElementById('condition-group-editor');
     const listDiv = document.getElementById('condition-groups-list'); // The list of groups
     // const editorTitle = document.getElementById('condition-editor-title'); // No longer used directly
-    const logicToggle = document.getElementById('conditionGroupLogicToggle');
+    // const logicToggle = document.getElementById('conditionGroupLogicToggle'); // REMOVED
+    const logicButton = document.getElementById('conditionGroupLogicButton'); // Get the dropdown button
+    const logicValueInput = document.getElementById('conditionGroupLogicValue'); // Get the hidden input
     const membersListUL = document.getElementById('editable-condition-group-members');
     const deleteButton = document.getElementById('deleteConditionGroupBtn');
 
-    if (!editorDiv || !listDiv || !logicToggle || !membersListUL || !deleteButton) {
+    if (!editorDiv || !listDiv || !logicButton || !logicValueInput || !membersListUL || !deleteButton) { // UPDATED CHECK
         console.error("Missing editor elements for showConditionGroupEditor!");
         return;
     }
@@ -2045,8 +2101,11 @@ function showConditionGroupEditor(groupData = null) {
     if (groupData) {
         // --- Populate for Editing Existing Group ---
         console.log(`Populating editor for Condition Group CG${groupData.n}`);
-        currentEditingConditionGroupNum = groupData.n;
-        logicToggle.checked = groupData.l === 1; // 1 for OR, 0 for AND
+        currentEditingConditionGroupNum = groupData.n; // Store the group number being edited
+        // Set the logic dropdown button text and hidden input value
+        const logicText = groupData.l === 1 ? 'Any' : 'All'; // Determine text based on saved logic
+        logicButton.textContent = logicText;
+        logicValueInput.value = groupData.l; // Set the hidden input value (0 or 1)
         deleteButton.style.display = 'inline-block';
 
         const activeMembersInGroup = groupData.ca.filter(conNum => conNum > 0);
@@ -2077,7 +2136,9 @@ function showConditionGroupEditor(groupData = null) {
         // --- Populate for Creating New Group ---
         console.log("Populating editor for New Condition Group");
         currentEditingConditionGroupNum = 0;
-        logicToggle.checked = false; // Default to AND logic (0)
+        // Default to AND logic (0) for new groups
+        logicButton.textContent = 'All (AND)';
+        logicValueInput.value = '0';
         deleteButton.style.display = 'none';
 
         const placeholder = document.createElement('li');
@@ -2218,17 +2279,18 @@ function handleRemoveConditionGroupMember(event) {
 function handleSaveConditionGroup() {
     console.log("Save Condition Group button clicked.");
 
-    const logicToggle = document.getElementById('conditionGroupLogicToggle');
+    // const logicToggle = document.getElementById('conditionGroupLogicToggle'); // REMOVED
+    const logicValueInput = document.getElementById('conditionGroupLogicValue'); // Get the hidden input
     const membersListUL = document.getElementById('editable-condition-group-members');
 
-    if (!logicToggle || !membersListUL) {
+    if (!logicValueInput || !membersListUL) { // Check for the hidden input
         console.error("Missing elements for saving condition group!");
         alert("Error: Could not save condition group. Editor elements missing.");
         return;
     }
 
     // 1. Get the logic (0 for AND, 1 for OR)
-    const groupLogic = logicToggle.checked ? 1 : 0; // 1 if checked (OR), 0 if not (AND)
+    const groupLogic = parseInt(logicValueInput.value, 10); // Read the value from the hidden input
 
     // 2. Get the member condition numbers
     const memberConditionNumbers = [];
@@ -2304,6 +2366,39 @@ function handleSaveConditionGroup() {
     // Reset currentEditingConditionGroupNum (already done in hideConditionGroupEditor)
 }
 
+// --- NEW: Handler for deleting a Condition Group ---
+function handleDeleteConditionGroup() {
+    if (currentEditingConditionGroupNum <= 0) {
+        console.error("No condition group is currently being edited. Cannot delete.");
+        alert("Error: No group selected for deletion.");
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete Condition Group CG${currentEditingConditionGroupNum}? This will mark it inactive.`)) {
+        const groupToDelete = currentConfig.conditionGroups.find(cg => cg.n === currentEditingConditionGroupNum);
+
+        if (groupToDelete) {
+            // Mark as inactive
+            groupToDelete.s = false;
+            // Optionally, clear its members array to free up condition references if needed,
+            // though just marking inactive is usually sufficient for filtering.
+            // For completeness and to match default state of inactive groups:
+            for (let i = 0; i < groupToDelete.ca.length; i++) {
+                groupToDelete.ca[i] = 0;
+            }
+            groupToDelete.l = 0; // Reset logic to default (AND)
+
+            console.log(`Marked Condition Group CG${currentEditingConditionGroupNum} as inactive.`);
+
+            hideConditionGroupEditor(); // Hide the editor
+            displayConditionGroups();   // Refresh the list
+        } else {
+            console.error(`Could not find Condition Group CG${currentEditingConditionGroupNum} to delete.`);
+            alert(`Error: Could not find Condition Group CG${currentEditingConditionGroupNum}.`);
+        }
+    }
+}
+
 // --- Placeholder for displaying Action Groups ---
 function displayActionGroups() {
     const listElement = document.getElementById('action-groups-list');
@@ -2321,6 +2416,16 @@ function displayActionGroups() {
     console.log("displayActionGroups function called - placeholder.");
 }
 
+// --- NEW: Function to set the Condition Group Logic from the dropdown ---
+function setConditionGroupLogic(value, text) {
+    const logicButton = document.getElementById('conditionGroupLogicButton');
+    const logicValueInput = document.getElementById('conditionGroupLogicValue');
+    if (logicButton && logicValueInput) {
+        logicButton.textContent = text; // Update the button text
+        logicValueInput.value = value; // Update the hidden input value
+        console.log(`Condition Group Logic set to: ${text} (Value: ${value})`);
+    }
+}
 
 
 // --- Event Listeners ---
@@ -2405,5 +2510,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveConditionGroupBtn = document.getElementById('saveConditionGroupBtn');
     if (saveConditionGroupBtn) {
         saveConditionGroupBtn.addEventListener('click', handleSaveConditionGroup);
+    }
+    // --- NEW: Attach listener for the Delete button in the Condition Group editor ---
+    const deleteConditionGroupBtn = document.getElementById('deleteConditionGroupBtn');
+    if (deleteConditionGroupBtn) {
+        deleteConditionGroupBtn.addEventListener('click', handleDeleteConditionGroup);
     }
 });
