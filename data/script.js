@@ -2156,7 +2156,6 @@ function showConditionGroupEditor(groupData = null) {
     // attachConditionGroupEditorMemberListeners(); // Potentially redundant if all items go through addConditionToEditorList
 }
 
-
 function hideConditionGroupEditor() {
     const editorDiv = document.getElementById('condition-group-editor');
     const listDiv = document.getElementById('condition-groups-list');
@@ -2210,19 +2209,23 @@ function addConditionToEditorList(condition) {
     const badge3 = getConditionBadge3(condition.cp, condition.v);
 
     memberLi.innerHTML = `
-        <div class="flex-grow-1 me-2">
-            <span class="condition-number fw-bold me-1">C${condition.cn}</span>
-            <span class="condition-target-name text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</span>
-            <div class="condition-badges d-inline-block ms-1">
-                <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
-                <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
-                <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
-            </div>
+    <!-- Move the condition number outside the flex-grow-1 div -->
+    <span class="condition-number fs-5 fw-bold me-2" title="Condition Number ${condition.cn}">C${condition.cn}</span>
+
+    <!-- The flex-grow-1 div now only contains the name and badges -->
+    <div class="flex-grow-1 me-2 d-flex flex-column gap-0">
+        <div class="condition-target-name small text-truncate" title="Target: ${targetIoTooltip}">${targetIoName}</div>
+        <div class="condition-badges">
+            <span class="badge ${badge1.class}" title="${badge1.title}">${badge1.text}</span>
+            <span class="badge ${badge2.class}" title="${badge2.title}">${badge2.text}</span>
+            <span class="badge ${badge3.class}" title="${badge3.title}">${badge3.text}</span>
         </div>
-        <button class="btn btn-sm btn-outline-danger py-0 px-1 delete-member-btn" title="Remove C${condition.cn} from group">
-            &times;
-        </button>
-    `;
+    </div>
+
+    <button class="btn btn-sm btn-outline-danger py-0 px-1 delete-member-btn" title="Remove C${condition.cn} from group">
+        &times;
+    </button>
+`;
 
     // If it's the first item, clear any placeholder text (like "Drag individual Conditions here")
     const placeholder = membersListUL.querySelector('.text-muted.text-center');
@@ -2239,7 +2242,6 @@ function addConditionToEditorList(condition) {
     return memberLi; // Return the added element, might be useful
 }
 
-// --- NEW: Attach listeners to the remove buttons within the editor's member list ---
 function attachConditionGroupEditorMemberListeners() {
     const membersListUL = document.getElementById('editable-condition-group-members');
     if (!membersListUL) return;
@@ -2252,7 +2254,6 @@ function attachConditionGroupEditorMemberListeners() {
     });
 }
 
-// --- NEW: Handler for clicking the remove button on a member in the editor list ---
 function handleRemoveConditionGroupMember(event) {
     const button = event.currentTarget;
     const listItem = button.closest('li.condition-group-editor-member'); // Get the parent list item
@@ -2275,7 +2276,6 @@ function handleRemoveConditionGroupMember(event) {
     }
 }
 
-// --- NEW: Handler for saving a Condition Group ---
 function handleSaveConditionGroup() {
     console.log("Save Condition Group button clicked.");
 
@@ -2366,7 +2366,6 @@ function handleSaveConditionGroup() {
     // Reset currentEditingConditionGroupNum (already done in hideConditionGroupEditor)
 }
 
-// --- NEW: Handler for deleting a Condition Group ---
 function handleDeleteConditionGroup() {
     if (currentEditingConditionGroupNum <= 0) {
         console.error("No condition group is currently being edited. Cannot delete.");
@@ -2399,7 +2398,6 @@ function handleDeleteConditionGroup() {
     }
 }
 
-// --- Placeholder for displaying Action Groups ---
 function displayActionGroups() {
     const listElement = document.getElementById('action-groups-list');
     if (!listElement) {
@@ -2416,7 +2414,6 @@ function displayActionGroups() {
     console.log("displayActionGroups function called - placeholder.");
 }
 
-// --- NEW: Function to set the Condition Group Logic from the dropdown ---
 function setConditionGroupLogic(value, text) {
     const logicButton = document.getElementById('conditionGroupLogicButton');
     const logicValueInput = document.getElementById('conditionGroupLogicValue');
@@ -2428,7 +2425,6 @@ function setConditionGroupLogic(value, text) {
 }
 
 
-// --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig(); // Load config when the page is ready
     const saveButton = document.getElementById('saveConfigBtn');

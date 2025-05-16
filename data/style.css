@@ -157,12 +157,8 @@ footer {
 
 .condition-badges .badge {
     margin-right: 3px;
-    /* Spacing between badges */
     font-size: 0.7em;
-    /* Smaller badges */
-    /* padding: 0.1em 0.4em; */
     flex-shrink: 0;
-    /* Prevent badges shrinking too much */
 }
 
 .delete-condition-btn {
