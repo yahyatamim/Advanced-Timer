@@ -2813,7 +2813,7 @@ function getConditionSourceVisual(rule, ruleNumberForUniqueId) {
             contentHtml = `<span class="text-danger small">Condition C${rule.ci} (Not Found/Inactive)</span>`;
         }
     }
-    return `<div class="fw-bold mb-1">IF:</div><div>${contentHtml}</div>`;
+    return `<div>${contentHtml}</div>`;
 }
 
 function renderActionItemVisualForRule(action, isNested = false) {
@@ -2895,7 +2895,7 @@ function getActionTargetVisual(rule, ruleNumberForUniqueId) {
             contentHtml = `<span class="text-danger small">Action A${rule.ai} (Not Found/Inactive)</span>`;
         }
     }
-    return `<div class="fw-bold mb-1">THEN:</div><div>${contentHtml}</div>`;
+    return `<div>${contentHtml}</div>`;
 }
 
 function displayRules() {
@@ -3667,12 +3667,11 @@ function initializeDragAndDrop() {
                         thenSlot.innerHTML = `<span class="text-danger small">Error: AG${groupNum} not found or inactive.</span>`;
                     }
                 }
-                itemEl.remove(); // Remove the clone from the DOM
+                itemEl.remove();
             }
         });
     }
 
-    // --- Make rules-list sortable for reordering rules ---
     if (rulesListUL) {
         Sortable.create(rulesListUL, {
             group: 'rules-reorder', // Unique group name for reordering rules
