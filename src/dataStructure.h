@@ -106,9 +106,8 @@ struct action {
 
 // Groups multiple conditions together with a combining logic
 struct conditionGroup {
-  uint8_t num;                                       // Unique ID for this group
-  uint8_t conditionArray[MAX_CONDITIONS_PER_GROUP];  // Array of 'conNum's
-  // Configuration:
+  uint8_t num;  // Unique ID for this group
+  uint8_t conditionArray[MAX_CONDITIONS_PER_GROUP];
   combineLogic Logic;  // Logic used to combine results (AND/OR)
   bool status;         // Is this group definition active/enabled?
 };

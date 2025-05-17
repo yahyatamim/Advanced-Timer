@@ -365,3 +365,8 @@ footer {
 .action-group-number {
     color: #6c757d;
 }
+
+.rule-id-drag-handle {
+    cursor: grab;
+    /* Indicates draggability */
+}

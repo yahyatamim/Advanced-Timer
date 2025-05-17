@@ -98,7 +98,6 @@ String generateJsonConfigString() {
     JsonObject conditionGroup = conditionGroupsArray.add<JsonObject>();
     conditionGroup["n"] = conditionGroups[i].num;
     JsonArray conditionArray = conditionGroup["ca"].to<JsonArray>();
-    JsonArray resultArray = conditionGroup["ra"].to<JsonArray>();
     for (uint8_t j = 0; j < MAX_CONDITIONS_PER_GROUP; j++) {
       conditionArray.add(conditionGroups[i].conditionArray[j]);
     }

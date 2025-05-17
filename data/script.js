@@ -2916,9 +2916,44 @@ function displayRules() {
         return;
     }
 
-    const activeRules = currentConfig.rules.filter(rule => rule.s); // Filter for active rules
+    listElement.innerHTML = ''; // Clear existing list items
 
-    if (activeRules.length === 0) {
+    if (!currentConfig.rules || !Array.isArray(currentConfig.rules)) {
+        console.warn("Rules data is missing or not an array. Cannot populate list.");
+        const placeholder = document.createElement('li');
+        placeholder.className = 'list-group-item text-muted py-1';
+        placeholder.textContent = 'No rules data available.';
+        listElement.appendChild(placeholder);
+        return;
+    }
+
+    // 1. Get all active rules
+    const allActiveRules = currentConfig.rules.filter(r => r.s);
+    const activeRulesMap = new Map(allActiveRules.map(r => [r.n, r]));
+
+    // 2. Build the ordered list of rules to display
+    const rulesToDisplay = [];
+    const addedRuleNumbers = new Set();
+
+    // Use ruleSequence if it exists and is an array
+    if (currentConfig.ruleSequence && Array.isArray(currentConfig.ruleSequence)) {
+        currentConfig.ruleSequence.forEach(ruleNum => {
+            if (activeRulesMap.has(ruleNum) && !addedRuleNumbers.has(ruleNum)) {
+                rulesToDisplay.push(activeRulesMap.get(ruleNum));
+                addedRuleNumbers.add(ruleNum);
+            }
+        });
+    }
+
+    // Add any active rules that weren't in the sequence (or if sequence was bad/missing)
+    allActiveRules.forEach(rule => {
+        if (!addedRuleNumbers.has(rule.n)) {
+            rulesToDisplay.push(rule);
+            addedRuleNumbers.add(rule.n); // Should not be strictly necessary here but good for clarity
+        }
+    });
+
+    if (rulesToDisplay.length === 0) {
         const placeholder = document.createElement('li');
         placeholder.className = 'list-group-item text-muted py-1';
         placeholder.textContent = 'No active rules. Click "+ New Rule" to create one.';
@@ -2926,7 +2961,7 @@ function displayRules() {
         return;
     }
 
-    activeRules.forEach(rule => {
+    rulesToDisplay.forEach(rule => {
         const listItem = document.createElement('li');
         // Use p-0 to remove default padding, we'll control it internally
         listItem.className = 'list-group-item p-0 rule-item mb-1 border rounded'; // Added border and margin
@@ -2986,6 +3021,9 @@ function showRuleEditor(ruleData = null) {
     const ifSlot = document.getElementById('rule-editor-if-slot');
     const thenSlot = document.getElementById('rule-editor-then-slot');
     const deleteButton = document.getElementById('deleteRuleBtn');
+    const clearIfBtn = document.getElementById('clearIfSlotBtn');
+    const clearThenBtn = document.getElementById('clearThenSlotBtn');
+
     const saveButton = document.getElementById('saveRuleBtn'); // Assuming this is the text, not an icon
     const editingRuleNumInput = document.getElementById('editingRuleNum');
 
@@ -3004,12 +3042,15 @@ function showRuleEditor(ruleData = null) {
     ifSlot.dataset.sourceType = '';
     ifSlot.dataset.sourceId = '';
     ifSlot.dataset.sourceName = ''; // Clear any stored name
+    clearIfBtn.style.display = 'none';
 
     thenSlot.innerHTML = 'Drag Action or Action Group here';
     thenSlot.className = 'border p-2 text-muted text-center'; // Reset classes
     thenSlot.dataset.targetType = '';
     thenSlot.dataset.targetId = '';
     thenSlot.dataset.targetName = ''; // Clear any stored name
+    clearThenBtn.style.display = 'none';
+
 
 
     if (ruleData) {
@@ -3026,6 +3067,7 @@ function showRuleEditor(ruleData = null) {
                 ifSlot.innerHTML = `<div class="p-2"><span class="fw-bold">CG${group.n}</span>: ${group.l === 0 ? 'All' : 'Any'} of its members</div>`;
                 ifSlot.dataset.sourceType = 'ConditionGroup';
                 ifSlot.dataset.sourceId = group.n;
+                clearIfBtn.style.display = 'inline-block';
             } else {
                 ifSlot.innerHTML = `<span class="text-danger small">Error: CG${ruleData.ci} not found or inactive.</span>`;
             }
@@ -3036,9 +3078,11 @@ function showRuleEditor(ruleData = null) {
                 ifSlot.dataset.sourceType = 'Condition';
                 ifSlot.dataset.sourceId = condition.cn;
             } else {
+                clearIfBtn.style.display = 'inline-block';
                 ifSlot.innerHTML = `<span class="text-danger small">Error: C${ruleData.ci} not found or inactive.</span>`;
             }
         }
+        if (ifSlot.dataset.sourceId) clearIfBtn.style.display = 'inline-block';
 
         // Populate THEN slot
         if (ruleData.ag) { // Use Action Group
@@ -3047,6 +3091,7 @@ function showRuleEditor(ruleData = null) {
                 thenSlot.innerHTML = `<div class="p-2"><span class="fw-bold">AG${group.n}</span>: Executes its actions</div>`;
                 thenSlot.dataset.targetType = 'ActionGroup';
                 thenSlot.dataset.targetId = group.n;
+                clearThenBtn.style.display = 'inline-block';
             } else {
                 thenSlot.innerHTML = `<span class="text-danger small">Error: AG${ruleData.ai} not found or inactive.</span>`;
             }
@@ -3056,10 +3101,13 @@ function showRuleEditor(ruleData = null) {
                 thenSlot.innerHTML = renderActionItemVisualForRule(action, false);
                 thenSlot.dataset.targetType = 'Action';
                 thenSlot.dataset.targetId = action.an;
+                clearThenBtn.style.display = 'inline-block';
             } else {
                 thenSlot.innerHTML = `<span class="text-danger small">Error: A${ruleData.ai} not found or inactive.</span>`;
             }
         }
+        if (thenSlot.dataset.targetId) clearThenBtn.style.display = 'inline-block';
+
     } else {
         editorTitle.textContent = 'Create New Rule';
         console.log("Populating editor for New Rule");
@@ -3074,6 +3122,8 @@ function hideRuleEditor() {
     const listDiv = document.getElementById('rules-list');
     const createRuleBtn = document.getElementById('createRuleBtn');
     const definedRulesTitle = document.getElementById('definedRulesTitle');
+    const clearIfBtn = document.getElementById('clearIfSlotBtn');
+    const clearThenBtn = document.getElementById('clearThenSlotBtn');
 
     if (!editorDiv || !listDiv || !createRuleBtn || !definedRulesTitle) {
         console.error("Missing elements for hiding rule editor!");
@@ -3098,6 +3148,7 @@ function hideRuleEditor() {
     ifSlot.dataset.sourceType = '';
     ifSlot.dataset.sourceId = '';
     ifSlot.dataset.sourceName = '';
+    clearIfBtn.style.display = 'none';
 
     const thenSlot = document.getElementById('rule-editor-then-slot');
     thenSlot.innerHTML = 'Drag Action or Action Group here';
@@ -3105,6 +3156,7 @@ function hideRuleEditor() {
     thenSlot.dataset.targetType = '';
     thenSlot.dataset.targetId = '';
     thenSlot.dataset.targetName = '';
+    clearThenBtn.style.display = 'none';
 }
 
 function handleSaveRule() {
@@ -3206,7 +3258,31 @@ function handleDeleteRule() {
     // hideRuleEditor() is only called on successful deletion.
 }
 
+function handleClearRuleIfSlot() {
+    const ifSlot = document.getElementById('rule-editor-if-slot');
+    const clearIfBtn = document.getElementById('clearIfSlotBtn');
 
+    ifSlot.innerHTML = 'Drag Condition or Condition Group here';
+    ifSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    ifSlot.dataset.sourceType = '';
+    ifSlot.dataset.sourceId = '';
+    ifSlot.dataset.sourceName = '';
+    clearIfBtn.style.display = 'none';
+    console.log("Rule IF slot cleared.");
+}
+
+function handleClearRuleThenSlot() {
+    const thenSlot = document.getElementById('rule-editor-then-slot');
+    const clearThenBtn = document.getElementById('clearThenSlotBtn');
+
+    thenSlot.innerHTML = 'Drag Action or Action Group here';
+    thenSlot.className = 'border p-2 text-muted text-center'; // Reset classes
+    thenSlot.dataset.targetType = '';
+    thenSlot.dataset.targetId = '';
+    thenSlot.dataset.targetName = '';
+    clearThenBtn.style.display = 'none';
+    console.log("Rule THEN slot cleared.");
+}
 
 function attachEditRuleListeners() {
     document.querySelectorAll('.edit-rule-btn').forEach(button => {
@@ -3247,6 +3323,9 @@ function initializeDragAndDrop() {
     const editableConditionGroupMembersUL = document.getElementById('editable-condition-group-members');
 
     // --- New elements for Action Groups ---
+    const rulesListUL = document.getElementById('rules-list'); // For reordering rules
+
+
     const actionsList = document.getElementById('actions-list'); // Source list of all actions
     const actionsDropZone = document.getElementById('actions-drop-zone'); // For creating individual actions
     const actionGroupEditorDropZone = document.getElementById('action-group-drop-zone'); // For adding actions to a group
@@ -3256,7 +3335,7 @@ function initializeDragAndDrop() {
 
     if (!diList || !doList || !aiList || !softioList || !timersList ||
         !conditionsDropZone || !actionsDropZone || !conditionsList || !conditionGroupEditorDropZone || !editableConditionGroupMembersUL ||
-        !actionsList || !actionGroupEditorDropZone || !editableActionGroupMembersUL || !ruleEditorIfSlot || !ruleEditorThenSlot) { // <-- UPDATED CHECK
+        !actionsList || !actionGroupEditorDropZone || !editableActionGroupMembersUL || !ruleEditorIfSlot || !ruleEditorThenSlot || !rulesListUL) { // <-- UPDATED CHECK
         console.error("Could not find necessary elements for drag and drop initialization.");
         return;
     }
@@ -3437,6 +3516,7 @@ function initializeDragAndDrop() {
     // --- Make rule-editor-if-slot a target for conditions and condition groups ---
     if (ruleEditorIfSlot) {
         Sortable.create(ruleEditorIfSlot, {
+
             group: {
                 name: 'rule-editor-if-target', // Unique group name for this target slot
                 pull: false,
@@ -3447,6 +3527,7 @@ function initializeDragAndDrop() {
             onAdd: function (evt) {
                 const itemEl = evt.item; // The dragged (cloned) item
                 const ifSlot = evt.to;   // The target slot (rule-editor-if-slot)
+                const clearIfBtn = document.getElementById('clearIfSlotBtn');
 
                 // Determine if it's a condition or a condition group
                 if (itemEl.classList.contains('condition-item')) { // Individual condition
@@ -3457,6 +3538,7 @@ function initializeDragAndDrop() {
                         ifSlot.dataset.sourceType = 'Condition';
                         ifSlot.dataset.sourceId = conNum;
                         console.log(`Dropped Condition C${conNum} into IF slot.`);
+                        if (clearIfBtn) clearIfBtn.style.display = 'inline-block';
                     } else {
                         ifSlot.innerHTML = `<span class="text-danger small">Error: C${conNum} not found or inactive.</span>`;
                     }
@@ -3471,6 +3553,7 @@ function initializeDragAndDrop() {
                         ifSlot.dataset.sourceType = 'ConditionGroup';
                         ifSlot.dataset.sourceId = groupNum;
                         console.log(`Dropped Condition Group CG${groupNum} into IF slot.`);
+                        if (clearIfBtn) clearIfBtn.style.display = 'inline-block';
                     } else {
                         ifSlot.innerHTML = `<span class="text-danger small">Error: CG${groupNum} not found or inactive.</span>`;
                     }
@@ -3555,6 +3638,7 @@ function initializeDragAndDrop() {
             onAdd: function (evt) {
                 const itemEl = evt.item; // The dragged (cloned) item
                 const thenSlot = evt.to; // The target slot (rule-editor-then-slot)
+                const clearThenBtn = document.getElementById('clearThenSlotBtn');
 
                 // Determine if it's an action or an action group
                 if (itemEl.classList.contains('action-item')) { // Individual action
@@ -3565,6 +3649,7 @@ function initializeDragAndDrop() {
                         thenSlot.dataset.targetType = 'Action'; // Note: using targetType for THEN slot
                         thenSlot.dataset.targetId = actNum;
                         console.log(`Dropped Action A${actNum} into THEN slot.`);
+                        if (clearThenBtn) clearThenBtn.style.display = 'inline-block';
                     } else {
                         thenSlot.innerHTML = `<span class="text-danger small">Error: A${actNum} not found or inactive.</span>`;
                     }
@@ -3577,6 +3662,7 @@ function initializeDragAndDrop() {
                         thenSlot.dataset.targetType = 'ActionGroup';
                         thenSlot.dataset.targetId = groupNum;
                         console.log(`Dropped Action Group AG${groupNum} into THEN slot.`);
+                        if (clearThenBtn) clearThenBtn.style.display = 'inline-block';
                     } else {
                         thenSlot.innerHTML = `<span class="text-danger small">Error: AG${groupNum} not found or inactive.</span>`;
                     }
@@ -3586,7 +3672,43 @@ function initializeDragAndDrop() {
         });
     }
 
+    // --- Make rules-list sortable for reordering rules ---
+    if (rulesListUL) {
+        Sortable.create(rulesListUL, {
+            group: 'rules-reorder', // Unique group name for reordering rules
+            animation: 150,
+            handle: '.rule-id-drag-handle', // Use the R<num> span as the drag handle
+            onEnd: function (evt) {
+                const reorderedActiveRuleNumbers = [];
+                const items = rulesListUL.querySelectorAll('li.rule-item');
+                items.forEach(item => {
+                    const ruleNum = parseInt(item.dataset.ruleNum, 10);
+                    if (ruleNum) {
+                        // Ensure uniqueness from DOM read, though displayRules should handle it
+                        if (!reorderedActiveRuleNumbers.includes(ruleNum)) {
+                            reorderedActiveRuleNumbers.push(ruleNum);
+                        }
+                    }
+                });
 
+                // Construct a new full sequence:
+                // Start with the reordered active rules (which are now unique).
+                // Then, append all other rule numbers (1 to MAX_RULES) that were not part of the reordered set,
+                // maintaining their default numerical order.
+                const completeNewSequence = [...reorderedActiveRuleNumbers];
+                const allPossibleRuleNumbers = Array.from({ length: currentConfig.rules.length /* MAX_RULES */ }, (_, i) => i + 1);
+
+                allPossibleRuleNumbers.forEach(num => {
+                    if (!completeNewSequence.includes(num)) {
+                        completeNewSequence.push(num);
+                    }
+                });
+
+                currentConfig.ruleSequence = completeNewSequence;
+                console.log("Updated ruleSequence (full, unique):", currentConfig.ruleSequence);
+            }
+        });
+    }
 
     // Add initialization for other lists/zones later
 }
@@ -3720,5 +3842,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteRuleBtn = document.getElementById('deleteRuleBtn');
     if (deleteRuleBtn) {
         deleteRuleBtn.addEventListener('click', handleDeleteRule); // <-- MODIFIED
+    }
+
+    const clearIfSlotButton = document.getElementById('clearIfSlotBtn');
+    if (clearIfSlotButton) {
+        clearIfSlotButton.addEventListener('click', handleClearRuleIfSlot);
+    }
+
+    const clearThenSlotButton = document.getElementById('clearThenSlotBtn');
+    if (clearThenSlotButton) {
+        clearThenSlotButton.addEventListener('click', handleClearRuleThenSlot);
     }
 });
